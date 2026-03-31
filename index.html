@@ -441,6 +441,7 @@ body{
   #panel-receipt{display:block!important;padding:24px!important;overflow:visible!important;}
   .print-btn,.tabs,.header,.filter-bar{display:none!important;}
 }
+#idSearchBox::placeholder{color:rgba(255,255,255,0.7);}
 </style>
 </head>
 <body>
@@ -456,7 +457,7 @@ body{
       <div class="header-date" id="hdrDate"></div>
     </div>
   </div>
-  <input id="idSearchBox" placeholder="🔢 ID 검색 후 Enter"
+  <input id="idSearchBox" placeholder="🔢 ID 검색 후 Enter" style_placeholder="color:white"
     style="height:44px;flex:1;max-width:220px;border-radius:22px;border:none;background:rgba(255,255,255,0.15);color:white;font-size:15px;font-family:inherit;padding:0 16px;outline:none;"
     onkeydown="pinById(event)"
     onfocus="this.style.background='rgba(255,255,255,0.25)'"
