@@ -391,6 +391,7 @@ body{
   .header-title{font-size:14px;white-space:nowrap;}
   .header-date{font-size:11px;}
   .header-stats{width:100%;justify-content:flex-start;gap:12px;}
+  #idSearchBox{max-width:100% !important;width:100%;}
   .stat-pill{padding:5px 14px;}
   .stat-num{font-size:20px;}
   .stat-label{font-size:10px;}
@@ -413,33 +414,7 @@ body{
   .badges{gap:5px;margin-bottom:10px;}
   .badge{font-size:11px;padding:3px 8px;}
 
-  /* 묶음 박스 인라인으로 */
-  .card-body > div:first-child{
-    flex-direction:column !important;
-    gap:8px !important;
-  }
-  .card-body > div:first-child > div:last-child{
-    align-self:flex-start !important;
-  }
-  .card-body > div:first-child > div:last-child > div{
-    min-width:0 !important;
-    padding:7px 14px !important;
-    display:flex !important;
-    flex-direction:row !important;
-    align-items:center !important;
-    gap:8px !important;
-    text-align:left !important;
-  }
-  .card-body > div:first-child > div:last-child > div > div:first-child{
-    font-size:26px !important;
-  }
-  .card-body > div:first-child > div:last-child > div > div:nth-child(2){
-    font-size:13px !important;
-  }
-  .card-body > div:first-child > div:last-child > div > div:nth-child(3){
-    font-size:11px !important;
-    margin-top:0 !important;
-  }
+
 
   /* 입력 행 */
   .irow{gap:8px;margin-bottom:7px;}
@@ -481,6 +456,12 @@ body{
       <div class="header-date" id="hdrDate"></div>
     </div>
   </div>
+  <input id="idSearchBox" placeholder="🔢 ID 검색 후 Enter"
+    style="height:44px;flex:1;max-width:220px;border-radius:22px;border:none;background:rgba(255,255,255,0.15);color:white;font-size:15px;font-family:inherit;padding:0 16px;outline:none;"
+    onkeydown="pinById(event)"
+    onfocus="this.style.background='rgba(255,255,255,0.25)'"
+    onblur="this.style.background='rgba(255,255,255,0.15)'"
+  />
   <div class="header-stats">
     <div class="stat-pill">
       <div class="stat-num" id="statDone">0</div>
@@ -502,9 +483,7 @@ body{
   <select class="f-select" id="deptSel" onchange="render()">
     <option value="">학과 전체</option>
   </select>
-  <input class="f-search" id="idSearchBox" placeholder="🔢 신청ID 검색 후 Enter" style="max-width:200px" onkeydown="pinById(event)" />
   <input class="f-search" id="searchBox" placeholder="🔍 교재명 · 강사 검색" oninput="render()" />
- 
 </div>
 
 <!-- Panels -->
