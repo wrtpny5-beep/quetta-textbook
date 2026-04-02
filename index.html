@@ -884,8 +884,7 @@ function tapBundle(id, perBundle, expectedBundles){
   }
 
   // Firebase 저장
-  const upd={묶음카운트:next};
-  if(next>0){upd.실입고수량=actual;upd.부족수량=Math.max(0,(b.수량||0)-actual);}
+  const upd={묶음카운트:next,실입고수량:next===0?0:actual,부족수량:next===0?0:Math.max(0,(b.수량||0)-actual)};
   db.ref('textbooks/'+id).update(upd);
 
   // 진동 피드백 (태블릿 지원 시)
@@ -1233,7 +1232,10 @@ async function doUpload(){
         교재사용기한:row['교재사용기한']||'',
         입고날짜:row['입고 날짜']||row['입고날짜']||'',
         입고확인일raw:row['입고확인일']||'',
-        ...(saved[id]||{입고확인:false})
+        ...(saved[id]||{
+          입고확인:!!(row['입고확인일']||'').trim(),
+          입고확인일:(row['입고확인일']||'').trim()||''
+        })
       };
     });
     await dbRef.update(updates);
