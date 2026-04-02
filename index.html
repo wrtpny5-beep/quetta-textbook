@@ -469,19 +469,35 @@ body{
   .receipt-hdr-count{font-size:28px!important;}
 
   /* 테이블 */
-  .rtable{font-size:11px!important;margin-bottom:8px!important;}
+  .rtable{font-size:11px!important;margin-bottom:8px!important;table-layout:fixed!important;width:100%!important;}
   .rtable th{
     background:#2BADA0!important;
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
-    padding:6px 8px!important;
-    font-size:11px!important;
+    padding:5px 6px!important;
+    font-size:10px!important;
+    white-space:nowrap!important;
   }
-  .rtable td{padding:5px 8px!important;font-size:11px!important;}
+  .rtable td{
+    padding:4px 6px!important;
+    font-size:10px!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    vertical-align:middle!important;
+  }
+  .rtable th:nth-child(1),.rtable td:nth-child(1){width:28px!important;}
+  .rtable th:nth-child(2),.rtable td:nth-child(2){width:44px!important;}
+  .rtable th:nth-child(3),.rtable td:nth-child(3){width:auto!important;}
+  .rtable th:nth-child(4),.rtable td:nth-child(4){width:44px!important;}
+  .rtable th:nth-child(5),.rtable td:nth-child(5){width:36px!important;text-align:right!important;}
+  .rtable th:nth-child(6),.rtable td:nth-child(6){width:36px!important;text-align:right!important;}
+  .rtable th:nth-child(7),.rtable td:nth-child(7){width:36px!important;text-align:right!important;}
+  .rtable th:nth-child(8),.rtable td:nth-child(8){width:80px!important;}
   .rtable input{
     border:none!important;
     border-bottom:1px solid #999!important;
-    font-size:11px!important;
+    font-size:10px!important;
     background:transparent!important;
     width:100%!important;
   }
@@ -489,10 +505,11 @@ body{
   .shortage-cell{color:#E05A2B!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 
   /* 수기 입력 */
-  #manualTable input{border:none!important;border-bottom:1px solid #CCC!important;font-size:11px!important;background:transparent!important;}
+  #manualTable{table-layout:fixed!important;width:100%!important;}
+  #manualTable input{border:none!important;border-bottom:1px solid #CCC!important;font-size:10px!important;background:transparent!important;}
   #manualTable input::placeholder{color:transparent!important;}
-  #manualTable th{background:#2BADA0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:6px 8px!important;font-size:11px!important;}
-  #manualTable td{padding:5px 8px!important;font-size:11px!important;}
+  #manualTable th{background:#2BADA0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:5px 6px!important;font-size:10px!important;white-space:nowrap!important;}
+  #manualTable td{padding:4px 6px!important;font-size:10px!important;}
 
   /* 수기입력 제목 버튼 숨기고 텍스트만 */
   #panel-receipt>div:nth-child(3)>div:first-child>button{display:none!important;}
