@@ -437,6 +437,11 @@ body{
 }
 
 @media print{
+  .rcpt-memo-input{border-bottom:1px solid #999 !important;color:#000 !important;}
+  .rcpt-memo-input::placeholder{color:transparent !important;}
+  button[onclick*="addMemoRow"]{display:none !important;}
+  button[onclick*="this.parentElement"]{display:none !important;}
+
   body>*:not(#panel-receipt){display:none!important;}
   #panel-receipt{display:block!important;padding:24px!important;overflow:visible!important;}
   .print-btn,.tabs,.header,.filter-bar{display:none!important;}
@@ -504,6 +509,7 @@ body{
     <thead>
       <tr>
         <th style="width:44px">NO.</th>
+        <th style="width:60px">신청ID</th>
         <th>교재명</th>
         <th>강사</th>
         <th style="text-align:right">신청</th>
@@ -514,6 +520,21 @@ body{
     </thead>
     <tbody id="rcptBody"></tbody>
   </table>
+  <div style="margin-bottom:16px;">
+    <div style="font-size:14px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">✏️ 추가 메모 (수기 작성란)</div>
+    <div id="rcptMemoArea">
+      <div class="memo-row" style="display:flex;align-items:flex-end;gap:10px;margin-bottom:8px;">
+        <input type="text" class="rcpt-memo-input" placeholder="메모 입력..." style="flex:1;border:none;border-bottom:1.5px solid #C8DDD9;font-size:15px;font-family:inherit;padding:6px 4px;outline:none;background:transparent;">
+        <button onclick="addMemoRow()" style="flex-shrink:0;background:var(--teal);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ 줄 추가</button>
+      </div>
+      <div class="memo-row" style="display:flex;align-items:flex-end;gap:10px;margin-bottom:8px;">
+        <input type="text" class="rcpt-memo-input" placeholder="메모 입력..." style="flex:1;border:none;border-bottom:1.5px solid #C8DDD9;font-size:15px;font-family:inherit;padding:6px 4px;outline:none;background:transparent;">
+      </div>
+      <div class="memo-row" style="display:flex;align-items:flex-end;gap:10px;margin-bottom:8px;">
+        <input type="text" class="rcpt-memo-input" placeholder="메모 입력..." style="flex:1;border:none;border-bottom:1.5px solid #C8DDD9;font-size:15px;font-family:inherit;padding:6px 4px;outline:none;background:transparent;">
+      </div>
+    </div>
+  </div>
   <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
 </div>
 
@@ -947,12 +968,13 @@ function renderReceipt(){
     const noteStr=b.비고||(shortage>0?`${shortage}부 부족`:'');
     return `<tr>
       <td style="color:var(--text-sub)">${i+1}</td>
+      <td style="color:var(--text-sub);font-size:13px">${esc(String(b.신청ID||b.id||''))}</td>
       <td><strong>${esc(b.신청제목||'')}</strong></td>
       <td>${esc(b.강사||'')}</td>
       <td style="text-align:right">${b.수량||0}권</td>
       <td style="text-align:right">${actual}권</td>
       <td style="text-align:right" class="${shortage>0?'shortage-cell':''}">${shortage>0?shortage+'권':'—'}</td>
-      <td style="color:var(--text-sub)">${esc(noteStr)}</td>
+      <td><input type="text" value="${esc(noteStr)}" style="border:none;border-bottom:1px solid #CCC;width:100%;font-size:14px;font-family:inherit;color:var(--text-main);background:transparent;padding:2px 4px;outline:none;" placeholder="—" onchange="updateRcptNote('${b.id}',this.value)"></td>
     </tr>`;
   }).join('');
 }
@@ -1045,6 +1067,19 @@ function renderDSA(){
       return `<td class="${cls}">${esc(String(v))}</td>`;
     }).join('')}</tr>`;
   }).join('');
+}
+
+function addMemoRow(){
+  const area=document.getElementById('rcptMemoArea');
+  const row=document.createElement('div');
+  row.className='memo-row';
+  row.style.cssText='display:flex;align-items:flex-end;gap:10px;margin-bottom:8px;';
+  row.innerHTML=`<input type="text" class="rcpt-memo-input" placeholder="메모 입력..." style="flex:1;border:none;border-bottom:1.5px solid #C8DDD9;font-size:15px;font-family:inherit;padding:6px 4px;outline:none;background:transparent;"><button onclick="this.parentElement.remove()" style="flex-shrink:0;background:#F4F4F4;color:#999;border:none;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit;">✕</button>`;
+  area.appendChild(row);
+}
+
+function updateRcptNote(id, val){
+  db.ref('textbooks/'+id).update({비고:val});
 }
 
 function saveDsaLastDate(val){
