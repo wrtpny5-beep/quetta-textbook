@@ -927,6 +927,10 @@ function toggleCheck(id){
     upd.입고확인일=`${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
     if(b.실입고수량===undefined||b.실입고수량===null)upd.실입고수량=b.수량||0;
   }
+  // 로컬 즉시 반영
+  Object.assign(b, upd);
+  render();
+  updateStats();
   db.ref('textbooks/'+id).update(upd);
 }
 
