@@ -1115,7 +1115,7 @@ function updateRcptNote(id, val){
 }
 
 function bulkConfirm(){
-  const targets=allBooks.filter(b=>!b.입고확인&&((b.입고확인일raw||'').trim()||(b.입고날짜||'').trim()));
+  const targets=allBooks.filter(b=>!b.입고확인&&(b.입고여부===true||b.입고여부==='True'||(b.입고확인일raw||'').trim()||(b.입고날짜||'').trim()));
   if(!targets.length){alert('처리할 항목이 없습니다.');return;}
   if(!confirm(`입고확인일이 있는 ${targets.length}건을 완료 처리할까요?`))return;
   const updates={};
@@ -1251,9 +1251,10 @@ async function doUpload(){
         강의예정일:row['강의예정일']||'',
         교재사용기한:row['교재사용기한']||'',
         입고날짜:row['입고 날짜']||row['입고날짜']||'',
+        입고여부:row['입고 여부']||'',
         입고확인일raw:row['입고확인일']||'',
         ...(saved[id]||{
-          입고확인:!!(row['입고확인일']||'').trim(),
+          입고확인:row['입고 여부']==='True'||row['입고 여부']===true||!!(row['입고확인일']||'').trim(),
           입고확인일:(row['입고확인일']||'').trim()||''
         })
       };
