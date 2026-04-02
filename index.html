@@ -1277,7 +1277,7 @@ async function doUpload(){
     };
   });
 
-  const CHUNK=50;
+  const CHUNK=20;
   const total=Math.ceil(csvData.length/CHUNK);
   let done=0;
 
@@ -1313,13 +1313,14 @@ async function doUpload(){
     });
     try{
       await dbRef.update(updates);
+      await new Promise(r=>setTimeout(r,200));
     }catch(e){
       btn.textContent=`❌ 오류: ${e.message}`;
       btn.disabled=false;
       return;
     }
     done++;
-    btn.textContent=`⏳ ${done}/${total} 업로드 중...`;
+    btn.textContent=`⏳ ${done}/${total} 업로드 중... (${Math.min(i+CHUNK,csvData.length)}/${csvData.length}건)`;
   }
 
   btn.textContent='✅ 완료!';
