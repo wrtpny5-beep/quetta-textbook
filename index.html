@@ -500,6 +500,12 @@ body{
 </div>
 
 <div class="panel" id="panel-receipt">
+  <div style="background:white;border-radius:var(--radius);padding:14px 20px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <span style="font-size:14px;font-weight:700;color:var(--text-sub);">📅 날짜 선택</span>
+    <input type="date" id="rcptDateFilter" style="height:40px;padding:0 12px;border:2px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;color:var(--text-main);" onchange="renderReceipt()">
+    <button onclick="document.getElementById('rcptDateFilter').value=todayYMD;renderReceipt();" style="height:40px;padding:0 16px;background:var(--teal);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">오늘</button>
+    <button onclick="document.getElementById('rcptDateFilter').value='';renderReceipt();" style="height:40px;padding:0 16px;background:#F4F4F4;color:#666;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">전체</button>
+  </div>
   <div class="receipt-hdr">
     <div>
       <div class="receipt-hdr-title">교재 입고 내역 (인수증)</div>
@@ -724,7 +730,11 @@ function switchTab(name,el){
   document.getElementById('panel-'+name).classList.add('on');
   el.classList.add('on');
   document.getElementById('filterBar').style.display=name==='check'?'flex':'none';
-  if(name==='receipt')renderReceipt();
+  if(name==='receipt'){
+    const df=document.getElementById('rcptDateFilter');
+    if(df&&!df.value)df.value=todayYMD;
+    renderReceipt();
+  }
   if(name==='dsa')renderDSA();
 }
 
@@ -984,7 +994,15 @@ function savePage(id,v){
 
 /* ── Receipt ──────────────────────────────────────── */
 function renderReceipt(){
-  const done=allBooks.filter(b=>b.입고확인);
+  const filterDate=document.getElementById('rcptDateFilter')&&document.getElementById('rcptDateFilter').value;
+  const done=allBooks.filter(b=>{
+    if(!b.입고확인)return false;
+    if(!filterDate)return true;
+    const d=fmtDate(b.입고확인일);
+    // YYYY-MM-DD 포맷으로 비교
+    const normalized=d.replace(/\./g,'-').replace(/(\d{4})-(\d{1,2})-(\d{1,2})/,(_,y,m,dd)=>`${y}-${m.padStart(2,'0')}-${dd.padStart(2,'0')}`);
+    return normalized===filterDate;
+  });
   document.getElementById('rcptCount').innerHTML=`${done.length}<span>확인 건수</span>`;
   document.getElementById('rcptBody').innerHTML=done.map((b,i)=>{
     const actual=b.실입고수량!==undefined?b.실입고수량:b.수량||0;
