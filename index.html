@@ -437,16 +437,66 @@ body{
 }
 
 @media print{
-  .rcpt-memo-input{border-bottom:1px solid #999 !important;color:#000 !important;}
-  .rcpt-memo-input::placeholder{color:transparent !important;}
-  button[onclick*="addManualRow"]{display:none !important;}
-  button[onclick*="closest"]{display:none !important;}
-  #manualTable input{border-bottom:1px solid #999 !important;}
-  #manualTable input::placeholder{color:transparent !important;}
+  @page{size:A4;margin:15mm 12mm;}
 
-  body>*:not(#panel-receipt){display:none!important;}
-  #panel-receipt{display:block!important;padding:24px!important;overflow:visible!important;}
-  .print-btn,.tabs,.header,.filter-bar{display:none!important;}
+  body>*{display:none!important;}
+  #panel-receipt{
+    display:block!important;
+    padding:0!important;
+    overflow:visible!important;
+    position:fixed;top:0;left:0;width:100%;
+  }
+
+  /* 화면용 요소 숨김 */
+  .print-btn,.tabs,.header,.filter-bar,
+  button[onclick*="addManualRow"],
+  button[onclick*="closest"],
+  button[onclick*="rcptDateFilter"],
+  #panel-receipt>div:first-child{display:none!important;}
+
+  /* 인수증 헤더 */
+  .receipt-hdr{
+    background:#0D6B64!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+    border-radius:8px!important;
+    padding:14px 20px!important;
+    margin-bottom:10px!important;
+    display:flex!important;
+  }
+  .receipt-hdr-title{font-size:16px!important;}
+  .receipt-hdr-date{font-size:11px!important;}
+  .receipt-hdr-count{font-size:28px!important;}
+
+  /* 테이블 */
+  .rtable{font-size:11px!important;margin-bottom:8px!important;}
+  .rtable th{
+    background:#2BADA0!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+    padding:6px 8px!important;
+    font-size:11px!important;
+  }
+  .rtable td{padding:5px 8px!important;font-size:11px!important;}
+  .rtable input{
+    border:none!important;
+    border-bottom:1px solid #999!important;
+    font-size:11px!important;
+    background:transparent!important;
+    width:100%!important;
+  }
+  .rtable input::placeholder{color:transparent!important;}
+  .shortage-cell{color:#E05A2B!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+
+  /* 수기 입력 */
+  #manualTable input{border:none!important;border-bottom:1px solid #CCC!important;font-size:11px!important;background:transparent!important;}
+  #manualTable input::placeholder{color:transparent!important;}
+  #manualTable th{background:#2BADA0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:6px 8px!important;font-size:11px!important;}
+  #manualTable td{padding:5px 8px!important;font-size:11px!important;}
+
+  /* 수기입력 제목 버튼 숨기고 텍스트만 */
+  #panel-receipt>div:nth-child(3)>div:first-child>button{display:none!important;}
+  #panel-receipt>div:nth-child(3)>div:first-child>div{font-size:12px!important;color:#527470!important;}
 }
 #idSearchBox::placeholder{color:rgba(255,255,255,0.7);}
 </style>
