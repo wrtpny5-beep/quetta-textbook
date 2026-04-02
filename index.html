@@ -1108,6 +1108,20 @@ function updateRcptNote(id, val){
   db.ref('textbooks/'+id).update({비고:val});
 }
 
+function bulkConfirm(){
+  const targets=allBooks.filter(b=>!b.입고확인&&(b.입고확인일raw||'').trim());
+  if(!targets.length){alert('처리할 항목이 없습니다.');return;}
+  if(!confirm(`입고확인일이 있는 ${targets.length}건을 완료 처리할까요?`))return;
+  const updates={};
+  targets.forEach(b=>{
+    updates['textbooks/'+b.id+'/입고확인']=true;
+    updates['textbooks/'+b.id+'/입고확인일']=b.입고확인일raw.trim();
+    if(b.실입고수량===undefined||b.실입고수량===null)
+      updates['textbooks/'+b.id+'/실입고수량']=b.수량||0;
+  });
+  db.ref('/').update(updates).then(()=>alert('완료!'));
+}
+
 function saveDsaLastDate(val){
   dsaLastDate=val;
   db.ref('dsaConfig').update({lastUploadDate:val});
