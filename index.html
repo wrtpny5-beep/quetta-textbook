@@ -1078,7 +1078,7 @@ function renderReceipt(){
     return `<tr>
       <td style="color:var(--text-sub)">${i+1}</td>
       <td style="color:var(--text-sub);font-size:13px">${esc(String(b.신청ID||b.id||''))}</td>
-      <td><strong>${esc(b.신청제목||'')}</strong></td>
+      <td><strong>${esc((b.신청제목||'').length>20?(b.신청제목||'').slice(0,20)+'…':(b.신청제목||''))}</strong></td>
       <td>${esc(b.강사||'')}</td>
       <td style="text-align:right">${b.수량||0}권</td>
       <td style="text-align:right">${actual}권</td>
