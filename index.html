@@ -1246,7 +1246,7 @@ function onCSVPicked(input){
 async function doUpload(){
   if(!csvData||!db)return;
   const btn=document.getElementById('uploadBtn');
-  btn.textContent='⏳ 업로드 중...';btn.disabled=true;
+  btn.disabled=true;
 
   // 기존 확인 데이터 보존
   const saved={};
@@ -1258,7 +1258,10 @@ async function doUpload(){
     };
   });
 
-  const CHUNK=100;
+  const CHUNK=50;
+  const total=Math.ceil(csvData.length/CHUNK);
+  let done=0;
+
   for(let i=0;i<csvData.length;i+=CHUNK){
     const updates={};
     csvData.slice(i,i+CHUNK).forEach(row=>{
@@ -1289,7 +1292,15 @@ async function doUpload(){
         })
       };
     });
-    await dbRef.update(updates);
+    try{
+      await dbRef.update(updates);
+    }catch(e){
+      btn.textContent=`❌ 오류: ${e.message}`;
+      btn.disabled=false;
+      return;
+    }
+    done++;
+    btn.textContent=`⏳ ${done}/${total} 업로드 중...`;
   }
 
   btn.textContent='✅ 완료!';
