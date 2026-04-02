@@ -595,8 +595,8 @@ body{
 
   <div class="s-card">
     <div class="s-title">🔄 입고확인 일괄 처리</div>
-    <div class="s-desc">Firebase에 저장된 데이터 중 입고확인일이 있는 항목을 자동으로 입고완료 처리합니다.<br>CSV 재업로드 없이 기존 데이터를 한 번에 정리할 때 사용하세요.</div>
-    <button class="s-btn s-btn-teal" onclick="bulkConfirm()">입고확인일 있는 항목 일괄 완료 처리</button>
+    <div class="s-desc">미확인 항목을 전체 입고완료 처리합니다.<br>예전에 들어온 교재 정리할 때 한 번만 사용하세요.</div>
+    <button class="s-btn s-btn-teal" onclick="bulkConfirm()">미확인 항목 전체 완료 처리</button>
   </div>
 
 </div>
@@ -1115,17 +1115,19 @@ function updateRcptNote(id, val){
 }
 
 function bulkConfirm(){
-  const targets=allBooks.filter(b=>!b.입고확인&&(b.입고여부===true||b.입고여부==='True'||(b.입고확인일raw||'').trim()||(b.입고날짜||'').trim()));
-  if(!targets.length){alert('처리할 항목이 없습니다.');return;}
-  if(!confirm(`입고확인일이 있는 ${targets.length}건을 완료 처리할까요?`))return;
+  const targets=allBooks.filter(b=>!b.입고확인&&(b.입고여부==='True'||b.입고여부===true||b.입고여부==='TRUE'));
+  if(!targets.length){alert('미확인 항목이 없습니다.');return;}
+  if(!confirm(`미확인 ${targets.length}건을 모두 입고완료 처리할까요?`))return;
   const updates={};
+  const today=new Date();
+  const todayStr=`${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
   targets.forEach(b=>{
     updates['textbooks/'+b.id+'/입고확인']=true;
-    updates['textbooks/'+b.id+'/입고확인일']=(b.입고확인일raw||b.입고날짜||'').trim();
+    updates['textbooks/'+b.id+'/입고확인일']=(b.입고확인일raw||b.입고날짜||todayStr).trim();
     if(b.실입고수량===undefined||b.실입고수량===null)
       updates['textbooks/'+b.id+'/실입고수량']=b.수량||0;
   });
-  db.ref('/').update(updates).then(()=>alert('완료!'));
+  db.ref('/').update(updates).then(()=>alert('완료! 목록이 정리됩니다.'));
 }
 
 function saveDsaLastDate(val){
