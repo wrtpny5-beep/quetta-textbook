@@ -594,9 +594,14 @@ body{
   </div>
 
   <div class="s-card">
-    <div class="s-title">🔄 입고확인 일괄 처리</div>
-    <div class="s-desc">CSV의 입고여부가 True인 미확인 항목만 완료 처리합니다.<br>CSV 업로드 후 사용하세요.</div>
-    <button class="s-btn s-btn-teal" onclick="bulkConfirm()">미확인 항목 전체 완료 처리</button>
+    <div class="s-title">🔄 입고여부 일괄 처리</div>
+    <div class="s-desc">raw CSV 파일을 선택하면 <strong>입고여부=True</strong>인 항목만 골라서 입고완료 처리합니다.<br>Firebase 저장 없이 CSV를 직접 읽어서 처리해요.</div>
+    <div class="drop-zone" onclick="document.getElementById('bulkCsvFile').click()">
+      <div class="drop-icon">📋</div>
+      <div class="drop-text" id="bulkDropText">탭하여 raw CSV 선택</div>
+    </div>
+    <input type="file" id="bulkCsvFile" accept=".csv" style="display:none" onchange="onBulkCsvPicked(this)">
+    <button class="s-btn s-btn-teal" id="bulkConfirmBtn" style="display:none" onclick="bulkConfirm()">입고여부=True 항목 완료 처리</button>
   </div>
 
 </div>
@@ -1114,20 +1119,43 @@ function updateRcptNote(id, val){
   db.ref('textbooks/'+id).update({비고:val});
 }
 
-function bulkConfirm(){
-  const targets=allBooks.filter(b=>!b.입고확인&&(b.입고여부==='True'||b.입고여부===true));
-  if(!targets.length){alert('미확인 항목이 없습니다.');return;}
-  if(!confirm(`입고여부가 True인 미확인 ${targets.length}건을 완료 처리할까요?`))return;
+let _bulkCsvRows=[];
+
+function onBulkCsvPicked(input){
+  const f=input.files[0];
+  if(!f)return;
+  document.getElementById('bulkDropText').textContent='📄 '+f.name;
+  Papa.parse(f,{header:true,skipEmptyLines:true,complete:r=>{
+    _bulkCsvRows=r.data;
+    const cnt=_bulkCsvRows.filter(row=>row['입고 여부']==='True'||row['입고 여부']===true).length;
+    document.getElementById('bulkConfirmBtn').textContent=`입고여부=True ${cnt}건 완료 처리`;
+    document.getElementById('bulkConfirmBtn').style.display='block';
+  }});
+}
+
+async function bulkConfirm(){
+  const trueRows=_bulkCsvRows.filter(row=>row['입고 여부']==='True'||row['입고 여부']===true);
+  if(!trueRows.length){alert('입고여부=True인 항목이 없습니다.');return;}
+  if(!confirm(`입고여부=True인 ${trueRows.length}건을 완료 처리할까요?`))return;
+  const btn=document.getElementById('bulkConfirmBtn');
+  btn.textContent='⏳ 처리 중...';btn.disabled=true;
   const updates={};
-  const today=new Date();
-  const todayStr=`${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
-  targets.forEach(b=>{
-    updates['textbooks/'+b.id+'/입고확인']=true;
-    updates['textbooks/'+b.id+'/입고확인일']=(b.입고확인일raw||b.입고날짜||todayStr).trim();
-    if(b.실입고수량===undefined||b.실입고수량===null)
-      updates['textbooks/'+b.id+'/실입고수량']=b.수량||0;
+  trueRows.forEach(row=>{
+    const id=String(row['신청ID']||'').trim();
+    if(!id)return;
+    updates['textbooks/'+id+'/입고확인']=true;
+    updates['textbooks/'+id+'/입고확인일']=(row['입고확인일']||'').trim();
+    if(!updates['textbooks/'+id+'/실입고수량'])
+      updates['textbooks/'+id+'/실입고수량']=parseInt(row['수량'])||0;
   });
-  db.ref('/').update(updates).then(()=>alert('완료! 목록이 정리됩니다.'));
+  await db.ref('/').update(updates);
+  btn.textContent='✅ 완료!';
+  setTimeout(()=>{
+    btn.style.display='none';btn.disabled=false;
+    document.getElementById('bulkDropText').textContent='탭하여 raw CSV 선택';
+    document.getElementById('bulkCsvFile').value='';
+    _bulkCsvRows=[];
+  },2000);
 }
 
 function saveDsaLastDate(val){
