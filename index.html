@@ -439,8 +439,10 @@ body{
 @media print{
   .rcpt-memo-input{border-bottom:1px solid #999 !important;color:#000 !important;}
   .rcpt-memo-input::placeholder{color:transparent !important;}
-  button[onclick*="addMemoRow"]{display:none !important;}
-  button[onclick*="this.parentElement"]{display:none !important;}
+  button[onclick*="addManualRow"]{display:none !important;}
+  button[onclick*="closest"]{display:none !important;}
+  #manualTable input{border-bottom:1px solid #999 !important;}
+  #manualTable input::placeholder{color:transparent !important;}
 
   body>*:not(#panel-receipt){display:none!important;}
   #panel-receipt{display:block!important;padding:24px!important;overflow:visible!important;}
@@ -521,18 +523,26 @@ body{
     <tbody id="rcptBody"></tbody>
   </table>
   <div style="margin-bottom:16px;">
-    <div style="font-size:14px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">✏️ 추가 메모 (수기 작성란)</div>
-    <div id="rcptMemoArea">
-      <div class="memo-row" style="display:flex;align-items:flex-end;gap:10px;margin-bottom:8px;">
-        <input type="text" class="rcpt-memo-input" placeholder="메모 입력..." style="flex:1;border:none;border-bottom:1.5px solid #C8DDD9;font-size:15px;font-family:inherit;padding:6px 4px;outline:none;background:transparent;">
-        <button onclick="addMemoRow()" style="flex-shrink:0;background:var(--teal);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ 줄 추가</button>
-      </div>
-      <div class="memo-row" style="display:flex;align-items:flex-end;gap:10px;margin-bottom:8px;">
-        <input type="text" class="rcpt-memo-input" placeholder="메모 입력..." style="flex:1;border:none;border-bottom:1.5px solid #C8DDD9;font-size:15px;font-family:inherit;padding:6px 4px;outline:none;background:transparent;">
-      </div>
-      <div class="memo-row" style="display:flex;align-items:flex-end;gap:10px;margin-bottom:8px;">
-        <input type="text" class="rcpt-memo-input" placeholder="메모 입력..." style="flex:1;border:none;border-bottom:1.5px solid #C8DDD9;font-size:15px;font-family:inherit;padding:6px 4px;outline:none;background:transparent;">
-      </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:14px;font-weight:700;color:var(--text-sub);">✏️ 수기 입력</div>
+      <button onclick="addManualRow()" style="background:var(--teal);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ 행 추가</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="rtable" id="manualTable">
+        <thead>
+          <tr>
+            <th style="width:60px">신청ID</th>
+            <th>교재명</th>
+            <th>강사</th>
+            <th style="text-align:right;width:60px">신청</th>
+            <th style="text-align:right;width:60px">실입고</th>
+            <th style="text-align:right;width:50px">부족</th>
+            <th>비고</th>
+            <th style="width:36px"></th>
+          </tr>
+        </thead>
+        <tbody id="manualBody"></tbody>
+      </table>
     </div>
   </div>
   <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
@@ -1069,14 +1079,27 @@ function renderDSA(){
   }).join('');
 }
 
-function addMemoRow(){
-  const area=document.getElementById('rcptMemoArea');
-  const row=document.createElement('div');
-  row.className='memo-row';
-  row.style.cssText='display:flex;align-items:flex-end;gap:10px;margin-bottom:8px;';
-  row.innerHTML=`<input type="text" class="rcpt-memo-input" placeholder="메모 입력..." style="flex:1;border:none;border-bottom:1.5px solid #C8DDD9;font-size:15px;font-family:inherit;padding:6px 4px;outline:none;background:transparent;"><button onclick="this.parentElement.remove()" style="flex-shrink:0;background:#F4F4F4;color:#999;border:none;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit;">✕</button>`;
-  area.appendChild(row);
+function addManualRow(){
+  const body=document.getElementById('manualBody');
+  const tr=document.createElement('tr');
+  const cellStyle='border:none;width:100%;font-size:14px;font-family:inherit;background:transparent;padding:4px;outline:none;border-bottom:1px solid #DDD;';
+  tr.innerHTML=`
+    <td><input type="text" placeholder="ID" style="${cellStyle}width:54px"></td>
+    <td><input type="text" placeholder="교재명" style="${cellStyle}"></td>
+    <td><input type="text" placeholder="강사" style="${cellStyle}width:60px"></td>
+    <td><input type="number" placeholder="0" style="${cellStyle}width:50px;text-align:right"></td>
+    <td><input type="number" placeholder="0" style="${cellStyle}width:50px;text-align:right"></td>
+    <td><input type="number" placeholder="0" style="${cellStyle}width:40px;text-align:right"></td>
+    <td><input type="text" placeholder="비고" style="${cellStyle}"></td>
+    <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:#CCC;font-size:18px;cursor:pointer;padding:0 4px;">✕</button></td>
+  `;
+  body.appendChild(tr);
 }
+
+// 초기 3행 생성
+document.addEventListener('DOMContentLoaded',()=>{
+  for(let i=0;i<3;i++)addManualRow();
+});
 
 function updateRcptNote(id, val){
   db.ref('textbooks/'+id).update({비고:val});
