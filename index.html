@@ -876,10 +876,10 @@ function tapBundle(id, perBundle, expectedBundles){
   // 실입고 수량 입력 필드도 갱신
   const ni=document.getElementById('ni-'+id);
   const sh=document.getElementById('sh-'+id);
-  if(ni)ni.value=next===0?'':actual;
+  if(ni)ni.value=next===0?0:actual;
   if(sh){
-    const shortage=Math.max(0,(b.수량||0)-actual);
-    sh.value=next===0?'':shortage;
+    const shortage=next===0?0:Math.max(0,(b.수량||0)-actual);
+    sh.value=shortage;
     sh.className='ninput'+(shortage>0&&next>0?' shortage':'');
   }
 
