@@ -1292,7 +1292,7 @@ async function doUpload(){
       const id=rc?`${sid}_${rc}`:sid;
       if(!sid)return;
       updates[id]={
-        신청ID:id,
+        신청ID:sid,
         신청제목:row['신청제목']||'',
         강사:row['강사']||'',
         학과:row['학과']||'',
@@ -1308,13 +1308,13 @@ async function doUpload(){
         강의예정일:row['강의예정일']||'',
         교재사용기한:row['교재사용기한']||'',
         입고날짜:row['입고 날짜']||'',
-        권당페이지수:parseInt(row['권당페이지수'])||0,
         입고여부:row['입고 여부']||'',
         입고확인일csv:row['입고확인일']||'',
         ...(saved[id]||{
           입고확인:String(row['입고 여부']||'').trim().toLowerCase()==='true',
           입고확인일:(row['입고확인일']||'').trim()||''
-        })
+        }),
+        권당페이지수:parseInt(row['권당페이지수'])||(saved[id]&&saved[id].권당페이지수)||0
       };
     });
     try{
