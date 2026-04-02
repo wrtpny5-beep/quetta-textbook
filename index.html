@@ -486,17 +486,16 @@ body{
     text-overflow:ellipsis!important;
     vertical-align:middle!important;
   }
-  .rtable th:nth-child(1),.rtable td:nth-child(1){width:28px!important;}
-  .rtable th:nth-child(2),.rtable td:nth-child(2){width:44px!important;}
-  .rtable th:nth-child(3),.rtable td:nth-child(3){width:auto!important;}
-  .rtable th:nth-child(4),.rtable td:nth-child(4){width:44px!important;}
-  .rtable th:nth-child(5),.rtable td:nth-child(5){width:36px!important;text-align:right!important;}
-  .rtable th:nth-child(6),.rtable td:nth-child(6){width:36px!important;text-align:right!important;}
-  .rtable th:nth-child(7),.rtable td:nth-child(7){width:36px!important;text-align:right!important;}
+  .rtable th:nth-child(1),.rtable td:nth-child(1){width:24px!important;}
+  .rtable th:nth-child(2),.rtable td:nth-child(2){width:42px!important;}
+  .rtable th:nth-child(3),.rtable td:nth-child(3){width:auto!important;overflow:hidden!important;}
+  .rtable th:nth-child(4),.rtable td:nth-child(4){width:44px!important;white-space:nowrap!important;}
+  .rtable th:nth-child(5),.rtable td:nth-child(5){width:38px!important;text-align:right!important;white-space:nowrap!important;}
+  .rtable th:nth-child(6),.rtable td:nth-child(6){width:38px!important;text-align:right!important;white-space:nowrap!important;}
+  .rtable th:nth-child(7),.rtable td:nth-child(7){width:38px!important;text-align:right!important;white-space:nowrap!important;}
   .rtable th:nth-child(8),.rtable td:nth-child(8){width:80px!important;}
   .rtable input{
     border:none!important;
-    border-bottom:1px solid #999!important;
     font-size:10px!important;
     background:transparent!important;
     width:100%!important;
@@ -506,7 +505,7 @@ body{
 
   /* 수기 입력 */
   #manualTable{table-layout:fixed!important;width:100%!important;}
-  #manualTable input{border:none!important;border-bottom:1px solid #CCC!important;font-size:10px!important;background:transparent!important;}
+  #manualTable input{border:none!important;font-size:10px!important;background:transparent!important;}
   #manualTable input::placeholder{color:transparent!important;}
   #manualTable th{background:#2BADA0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:5px 6px!important;font-size:10px!important;white-space:nowrap!important;}
   #manualTable td{padding:4px 6px!important;font-size:10px!important;}
@@ -595,29 +594,7 @@ body{
     </thead>
     <tbody id="rcptBody"></tbody>
   </table>
-  <div style="margin-bottom:16px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div style="font-size:14px;font-weight:700;color:var(--text-sub);">✏️ 수기 입력</div>
-      <button onclick="addManualRow()" style="background:var(--teal);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ 행 추가</button>
-    </div>
-    <div style="overflow-x:auto;">
-      <table class="rtable" id="manualTable">
-        <thead>
-          <tr>
-            <th style="width:60px">신청ID</th>
-            <th>교재명</th>
-            <th>강사</th>
-            <th style="text-align:right;width:60px">신청</th>
-            <th style="text-align:right;width:60px">실입고</th>
-            <th style="text-align:right;width:50px">부족</th>
-            <th>비고</th>
-            <th style="width:36px"></th>
-          </tr>
-        </thead>
-        <tbody id="manualBody"></tbody>
-      </table>
-    </div>
-  </div>
+
   <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
 </div>
 
@@ -1078,12 +1055,12 @@ function renderReceipt(){
     return `<tr>
       <td style="color:var(--text-sub)">${i+1}</td>
       <td style="color:var(--text-sub);font-size:13px">${esc(String(b.신청ID||b.id||''))}</td>
-      <td><strong>${esc((b.신청제목||'').length>20?(b.신청제목||'').slice(0,20)+'…':(b.신청제목||''))}</strong></td>
+      <td style="max-width:0"><strong style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.신청제목||'')}</strong></td>
       <td>${esc(b.강사||'')}</td>
-      <td style="text-align:right">${b.수량||0}권</td>
-      <td style="text-align:right">${actual}권</td>
-      <td style="text-align:right" class="${shortage>0?'shortage-cell':''}">${shortage>0?shortage+'권':'—'}</td>
-      <td><input type="text" value="${esc(noteStr)}" style="border:none;border-bottom:1px solid #CCC;width:100%;font-size:14px;font-family:inherit;color:var(--text-main);background:transparent;padding:2px 4px;outline:none;" placeholder="—" onchange="updateRcptNote('${b.id}',this.value)"></td>
+      <td style="text-align:right">${b.수량||0}</td>
+      <td style="text-align:right">${actual}</td>
+      <td style="text-align:right" class="${shortage>0?'shortage-cell':''}">${shortage>0?shortage:'—'}</td>
+      <td><input type="text" value="${esc(noteStr)}" style="border:none;width:100%;font-size:14px;font-family:inherit;color:var(--text-main);background:transparent;padding:2px 4px;outline:none;" placeholder="—" onchange="updateRcptNote('${b.id}',this.value)"></td>
     </tr>`;
   }).join('');
 }
