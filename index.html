@@ -1128,7 +1128,7 @@ function onBulkCsvPicked(input){
   Papa.parse(f,{header:true,skipEmptyLines:true,complete:r=>{
     _bulkCsvRows=r.data;
     const cnt=_bulkCsvRows.filter(row=>String(row['입고 여부']||row['입고여부']||'').trim().toLowerCase()==='true').length;
-    console.log('샘플 입고여부값:',_bulkCsvRows[0]&&(_bulkCsvRows[0]['입고 여부']||_bulkCsvRows[0]['입고여부']));
+    alert('샘플 입고여부값: ['+JSON.stringify(_bulkCsvRows[0]&&(Object.keys(_bulkCsvRows[0]).find(k=>k.includes('여부'))))+'] = '+(_bulkCsvRows[0]&&(_bulkCsvRows[0]['입고 여부']??_bulkCsvRows[0]['입고여부'])));
     document.getElementById('bulkConfirmBtn').textContent=`입고여부=True ${cnt}건 완료 처리`;
     document.getElementById('bulkConfirmBtn').style.display='block';
   }});
