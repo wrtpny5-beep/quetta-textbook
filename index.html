@@ -1146,7 +1146,7 @@ function onBulkCsvPicked(input){
   Papa.parse(f,{header:true,skipEmptyLines:true,complete:r=>{
     _bulkCsvRows=r.data;
     const cnt=_bulkCsvRows.filter(row=>String(row['입고 여부']||row['입고여부']||'').trim().toLowerCase()==='true').length;
-    alert('샘플 입고여부값: ['+JSON.stringify(_bulkCsvRows[0]&&(Object.keys(_bulkCsvRows[0]).find(k=>k.includes('여부'))))+'] = '+(_bulkCsvRows[0]&&(_bulkCsvRows[0]['입고 여부']??_bulkCsvRows[0]['입고여부'])));
+
     document.getElementById('bulkConfirmBtn').textContent=`입고여부=True ${cnt}건 완료 처리`;
     document.getElementById('bulkConfirmBtn').style.display='block';
   }});
@@ -1160,8 +1160,10 @@ async function bulkConfirm(){
   btn.textContent='⏳ 처리 중...';btn.disabled=true;
   const updates={};
   trueRows.forEach(row=>{
-    const id=String(row['신청ID']||'').trim();
-    if(!id)return;
+    const sid=String(row['신청ID']||'').trim();
+    const rc=(row['반 코드']||row['반코드']||'').trim();
+    const id=rc?`${sid}_${rc}`:sid;
+    if(!sid)return;
     updates['textbooks/'+id+'/입고확인']=true;
     updates['textbooks/'+id+'/입고확인일']=(row['입고확인일']||'').trim();
     if(!updates['textbooks/'+id+'/실입고수량'])
@@ -1270,7 +1272,8 @@ async function doUpload(){
   // 기존 확인 데이터 보존
   const saved={};
   allBooks.forEach(b=>{
-    saved[b.신청ID]={
+    const sk=b.id;
+    saved[sk]={
       입고확인:b.입고확인,실입고수량:b.실입고수량,
       부족수량:b.부족수량,비고:b.비고,
       권당페이지수:b.권당페이지수,입고확인일:b.입고확인일
@@ -1284,8 +1287,10 @@ async function doUpload(){
   for(let i=0;i<csvData.length;i+=CHUNK){
     const updates={};
     csvData.slice(i,i+CHUNK).forEach(row=>{
-      const id=String(row['신청ID']||row['신청id']||'').trim();
-      if(!id)return;
+      const sid=String(row['신청ID']||row['신청id']||'').trim();
+      const rc=(row['반 코드']||row['반코드']||'').trim();
+      const id=rc?`${sid}_${rc}`:sid;
+      if(!sid)return;
       updates[id]={
         신청ID:id,
         신청제목:row['신청제목']||'',
@@ -1306,7 +1311,7 @@ async function doUpload(){
         입고여부:row['입고 여부']||'',
         입고확인일csv:row['입고확인일']||'',
         ...(saved[id]||{
-          입고확인:row['입고 여부']==='True'||row['입고 여부']===true,
+          입고확인:String(row['입고 여부']||'').trim().toLowerCase()==='true',
           입고확인일:(row['입고확인일']||'').trim()||''
         })
       };
