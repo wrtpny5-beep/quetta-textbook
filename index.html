@@ -595,7 +595,7 @@ body{
     <tbody id="rcptBody"></tbody>
   </table>
 
-  <div style="background:#F8FAFA;border:1.5px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;">
+  <div id="manualEntrySection" style="background:#F8FAFA;border:1.5px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <div style="font-size:14px;font-weight:700;color:var(--text-sub);">✏️ 수기 입력 (CSV 업로드 시 자동 확인 처리)</div>
       <button onclick="addManualEntry()" style="background:var(--teal);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ 행 추가</button>
@@ -1246,6 +1246,8 @@ async function bulkConfirm(){
 
 /* ── 수기 입력 ──────────────────────────────────────── */
 function addManualEntry(id='', title='', date='', actual='', note=''){
+  const sec=document.getElementById('manualEntrySection');
+  if(sec)sec.style.display='block';
   const body=document.getElementById('manualEntryBody');
   const tr=document.createElement('tr');
   const inp='border:none;border-bottom:1.5px solid var(--border);font-size:14px;font-family:inherit;background:transparent;padding:4px;outline:none;width:100%';
@@ -1295,8 +1297,13 @@ async function saveManualEntries(){
 function loadManualEntries(){
   db.ref('manualEntries').once('value',snap=>{
     const data=snap.val();
-    if(!data)return;
+    const sec=document.getElementById('manualEntrySection');
     const body=document.getElementById('manualEntryBody');
+    if(!data||!Object.keys(data).length){
+      if(sec)sec.style.display='none';
+      return;
+    }
+    if(sec)sec.style.display='block';
     if(!body)return;
     body.innerHTML='';
     Object.values(data).forEach(e=>{
