@@ -595,6 +595,26 @@ body{
     <tbody id="rcptBody"></tbody>
   </table>
 
+  <div style="background:#F8FAFA;border:1.5px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:700;color:var(--text-sub);">✏️ 수기 입력 (CSV 업로드 시 자동 확인 처리)</div>
+      <button onclick="addManualEntry()" style="background:var(--teal);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ 행 추가</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;" id="manualEntryTable">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:6px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:80px">신청ID</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border)">교재명</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:120px">입고확인일</th>
+          <th style="text-align:right;padding:6px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:60px">실입고</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:100px">비고</th>
+          <th style="width:60px;border-bottom:2px solid var(--border)"></th>
+        </tr>
+      </thead>
+      <tbody id="manualEntryBody"></tbody>
+    </table>
+    <button onclick="saveManualEntries()" style="margin-top:12px;background:var(--teal-deep);color:white;border:none;border-radius:8px;padding:9px 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;width:100%">💾 수기 입력 저장 (Firebase 반영)</button>
+  </div>
   <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
 </div>
 
@@ -778,6 +798,7 @@ function switchTab(name,el){
     const df=document.getElementById('rcptDateFilter');
     if(df&&!df.value)df.value=todayYMD;
     renderReceipt();
+    loadManualEntries();
   }
   if(name==='dsa')renderDSA();
 }
@@ -830,7 +851,7 @@ function cardHTML(b){
   const pages=b.권당페이지수||0;
   let bundleBig='';
   if(pages>0){
-    const perBundle=Math.floor(4000/pages);
+    const perBundle=Math.round(4000/pages);
     const bundles=Math.ceil((b.수량||0)/perBundle);
     const bc=b.묶음카운트||0;
     const bundleStyle=bc===0
@@ -921,7 +942,7 @@ function tapBundle(id, perBundle, expectedBundles){
   const cur=b.묶음카운트||0;
   // 예정 묶음 수 초과 시 0으로 리셋
   const next=cur>=expectedBundles+2?0:cur+1;
-  const actual=next*perBundle;
+  const actual=next===expectedBundles?b.수량||0:next*perBundle;
 
   // 색상 결정
   let bg,border,color;
@@ -1223,6 +1244,67 @@ async function bulkConfirm(){
   },2000);
 }
 
+/* ── 수기 입력 ──────────────────────────────────────── */
+function addManualEntry(id='', title='', date='', actual='', note=''){
+  const body=document.getElementById('manualEntryBody');
+  const tr=document.createElement('tr');
+  const inp='border:none;border-bottom:1.5px solid var(--border);font-size:14px;font-family:inherit;background:transparent;padding:4px;outline:none;width:100%';
+  tr.innerHTML=`
+    <td style="padding:4px 6px"><input type="text" placeholder="신청ID" value="${id}" style="${inp}" class="me-id"></td>
+    <td style="padding:4px 6px"><input type="text" placeholder="교재명" value="${title}" style="${inp}" class="me-title"></td>
+    <td style="padding:4px 6px"><input type="date" value="${date}" style="${inp}" class="me-date"></td>
+    <td style="padding:4px 6px;text-align:right"><input type="number" placeholder="0" value="${actual}" style="${inp};text-align:right" class="me-actual"></td>
+    <td style="padding:4px 6px"><input type="text" placeholder="비고" value="${note}" style="${inp}" class="me-note"></td>
+    <td style="padding:4px 6px;text-align:center"><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:#CCC;font-size:18px;cursor:pointer;">✕</button></td>
+  `;
+  body.appendChild(tr);
+}
+
+async function saveManualEntries(){
+  const rows=document.querySelectorAll('#manualEntryBody tr');
+  if(!rows.length){alert('입력된 항목이 없습니다.');return;}
+  const entries={};
+  const fbUpdates={};
+  const today=new Date();
+  const todayStr=`${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
+  rows.forEach(tr=>{
+    const sid=tr.querySelector('.me-id').value.trim();
+    if(!sid)return;
+    const dateVal=tr.querySelector('.me-date').value;
+    const dateStr=dateVal?dateVal.replace(/-/g,'.'):todayStr;
+    const actual=parseInt(tr.querySelector('.me-actual').value)||0;
+    const note=tr.querySelector('.me-note').value.trim();
+    const title=tr.querySelector('.me-title').value.trim();
+    entries[sid]={신청ID:sid,교재명:title,입고확인일:dateStr,실입고수량:actual,비고:note};
+    // Firebase textbooks도 즉시 업데이트 (신청ID_반코드 형태 키 찾기)
+    const matched=allBooks.filter(b=>String(b.신청ID)===sid);
+    matched.forEach(b=>{
+      fbUpdates['textbooks/'+b.id+'/입고확인']=true;
+      fbUpdates['textbooks/'+b.id+'/입고확인일']=dateStr;
+      if(actual>0)fbUpdates['textbooks/'+b.id+'/실입고수량']=actual;
+      if(note)fbUpdates['textbooks/'+b.id+'/비고']=note;
+    });
+  });
+  // manualEntries 저장
+  await db.ref('manualEntries').set(entries);
+  // textbooks 즉시 반영
+  if(Object.keys(fbUpdates).length)await db.ref('/').update(fbUpdates);
+  alert(`✅ ${Object.keys(entries).length}건 저장 완료!`);
+}
+
+function loadManualEntries(){
+  db.ref('manualEntries').once('value',snap=>{
+    const data=snap.val();
+    if(!data)return;
+    const body=document.getElementById('manualEntryBody');
+    if(!body)return;
+    body.innerHTML='';
+    Object.values(data).forEach(e=>{
+      addManualEntry(e.신청ID||'',e.교재명||'',e.입고확인일?e.입고확인일.replace(/\./g,'-'):'',e.실입고수량||'',e.비고||'');
+    });
+  });
+}
+
 function saveDsaLastDate(val){
   dsaLastDate=val;
   db.ref('dsaConfig').update({lastUploadDate:val});
@@ -1313,6 +1395,10 @@ async function doUpload(){
   const btn=document.getElementById('uploadBtn');
   btn.disabled=true;
 
+  // manualEntries 조회해서 자동 확인 처리
+  const manualSnap=await db.ref('manualEntries').once('value');
+  const manualData=manualSnap.val()||{};
+
   // 기존 확인 데이터 보존
   const saved={};
   allBooks.forEach(b=>{
@@ -1355,8 +1441,8 @@ async function doUpload(){
         입고여부:row['입고 여부']||'',
         입고확인일csv:row['입고확인일']||'',
         ...(saved[id]||{
-          입고확인:String(row['입고 여부']||'').trim().toLowerCase()==='true',
-          입고확인일:(row['입고확인일']||'').trim()||''
+          입고확인:String(row['입고 여부']||'').trim().toLowerCase()==='true'||!!(manualData[sid]),
+          입고확인일:manualData[sid]?.입고확인일||(row['입고확인일']||'').trim()||''
         }),
         권당페이지수:parseInt(row['권당페이지수'])||(saved[id]&&saved[id].권당페이지수)||0
       };
