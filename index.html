@@ -558,6 +558,7 @@ body{
     <option value="">학과 전체</option>
   </select>
   <input class="f-search" id="searchBox" placeholder="🔍 교재명 · 강사 검색" oninput="render()" />
+  <button onclick="startVoiceMode()" style="height:40px;padding:0 18px;background:#E05A2B;color:white;border:none;border-radius:20px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">🎤 음성 모드</button>
 </div>
 
 <!-- Panels -->
@@ -685,11 +686,36 @@ body{
     <span class="tab-icon">📋</span>인수증
   </button>
   <button class="tab" onclick="switchTab('dsa',this)">
-    <span class="tab-icon">🖥️</span>DSA 업로드
+    <span class="tab-icon">🖥️</span>DSA 목록
   </button>
   <button class="tab" onclick="switchTab('settings',this)">
     <span class="tab-icon">⚙️</span>설정
   </button>
+</div>
+
+<!-- Voice Mode Overlay -->
+<div id="voiceOverlay" style="display:none;position:fixed;inset:0;background:#0D6B64;z-index:300;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+  <div style="color:rgba(255,255,255,0.6);font-size:16px;font-weight:700;">음성 인식 모드</div>
+
+  <!-- 최근 인식 결과 -->
+  <div style="background:rgba(255,255,255,0.1);border-radius:20px;padding:20px 40px;text-align:center;min-width:280px;">
+    <div style="color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:8px;" id="voiceRaw">말해보세요...</div>
+    <div style="color:white;font-size:52px;font-weight:900;letter-spacing:4px;line-height:1;" id="voiceId">—</div>
+    <div style="color:#D4BE52;font-size:18px;font-weight:700;margin-top:8px;" id="voiceTitle">—</div>
+    <div style="color:rgba(255,255,255,0.7);font-size:15px;margin-top:4px;" id="voiceBundles">—</div>
+  </div>
+
+  <!-- 마이크 상태 -->
+  <div id="voiceMicStatus" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:36px;">🎤</div>
+  <div style="color:rgba(255,255,255,0.6);font-size:14px;" id="voiceStatus">시작 중...</div>
+
+  <!-- 최근 기록 -->
+  <div style="width:100%;max-width:360px;max-height:180px;overflow-y:auto;padding:0 24px;">
+    <div id="voiceLog" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
+  <!-- 닫기 -->
+  <button onclick="stopVoiceMode()" style="background:rgba(255,255,255,0.15);color:white;border:none;border-radius:14px;padding:14px 40px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;">✕ 종료</button>
 </div>
 
 <!-- Numpad Overlay -->
@@ -936,12 +962,12 @@ function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function tapBundle(id, perBundle, expectedBundles){
+function tapBundle(id, perBundle, expectedBundles, cancel=false){
   const b=allBooks.find(x=>x.id===id);
   if(!b)return;
   const cur=b.묶음카운트||0;
-  // 예정 묶음 수 초과 시 0으로 리셋
-  const next=cur>=expectedBundles+2?0:cur+1;
+  // 취소 시 -1, 일반 시 +1 (예정+2 초과 시 리셋)
+  const next=cancel?Math.max(0,cur-1):cur>=expectedBundles+2?0:cur+1;
   const actual=next===expectedBundles?b.수량||0:next*perBundle;
 
   // 색상 결정
@@ -1310,6 +1336,160 @@ function loadManualEntries(){
       addManualEntry(e.신청ID||'',e.교재명||'',e.입고확인일?e.입고확인일.replace(/\./g,'-'):'',e.실입고수량||'',e.비고||'');
     });
   });
+}
+
+/* ── 음성 인식 모드 ──────────────────────────────────── */
+const VoiceSR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let voiceRec = null;
+let voiceActive = false;
+let lastAction = null; // 취소용 마지막 액션
+
+function convertVoiceNum(text){
+  const map = {'영':0,'공':0,'일':1,'하나':1,'이':2,'두':2,'둘':2,'삼':3,'셋':3,'사':4,'넷':4,'네':4,'오':5,'다섯':5,'육':6,'여섯':6,'칠':7,'일곱':7,'팔':8,'여덟':8,'구':9,'아홉':9};
+  text = text.replace(/\s/g,'');
+  // 이미 숫자면 그대로
+  if(/^\d+$/.test(text)) return text;
+  let result = '';
+  let i = 0;
+  while(i < text.length){
+    let matched = false;
+    if(i+1 < text.length){
+      const two = text.slice(i,i+2);
+      if(map[two] !== undefined){result += map[two]; i+=2; matched=true;}
+    }
+    if(!matched){
+      const one = text[i];
+      result += map[one] !== undefined ? map[one] : one;
+      i++;
+    }
+  }
+  return /^\d+$/.test(result) ? result : null;
+}
+
+function startVoiceMode(){
+  if(!VoiceSR){alert('크롬 브라우저에서만 음성인식이 됩니다.');return;}
+  const overlay = document.getElementById('voiceOverlay');
+  overlay.style.display = 'flex';
+  document.getElementById('voiceLog').innerHTML = '';
+  document.getElementById('voiceId').textContent = '—';
+  document.getElementById('voiceTitle').textContent = '—';
+  document.getElementById('voiceBundles').textContent = '—';
+  document.getElementById('voiceRaw').textContent = '말해보세요...';
+
+  voiceRec = new VoiceSR();
+  voiceRec.lang = 'ko-KR';
+  voiceRec.continuous = true;
+  voiceRec.interimResults = true;
+  voiceActive = true;
+
+  voiceRec.onresult = (e) => {
+    let interim = '';
+    let final = '';
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      const t = e.results[i][0].transcript.trim();
+      if(e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    const display = final || interim;
+    document.getElementById('voiceRaw').textContent = '"' + display + '"';
+
+    if(final){
+      // 취소 명령 감지
+      if(final.includes('취소')){
+        const numText = final.replace('취소','').trim();
+        const num = convertVoiceNum(numText) || (lastAction && lastAction.sid);
+        if(num) handleVoiceCancel(num);
+        return;
+      }
+      const num = convertVoiceNum(final);
+      if(num && num.length >= 3) handleVoiceId(num);
+    }
+  };
+
+  voiceRec.onerror = (e) => {
+    document.getElementById('voiceStatus').textContent = '오류: ' + e.error;
+  };
+
+  voiceRec.onend = () => {
+    if(voiceActive) voiceRec.start();
+  };
+
+  voiceRec.start();
+  document.getElementById('voiceStatus').textContent = '🔴 듣고 있어요...';
+  document.getElementById('voiceMicStatus').style.background = 'rgba(224,90,43,0.4)';
+}
+
+function stopVoiceMode(){
+  voiceActive = false;
+  if(voiceRec) voiceRec.stop();
+  document.getElementById('voiceOverlay').style.display = 'none';
+}
+
+function handleVoiceId(sid){
+  // 해당 신청ID 교재 찾기
+  const books = allBooks.filter(b => String(b.신청ID) === sid && !b.입고확인);
+  if(!books.length){
+    addVoiceLog(sid, null, '❌ 미확인 목록에 없음');
+    document.getElementById('voiceId').textContent = sid;
+    document.getElementById('voiceTitle').textContent = '없는 ID';
+    document.getElementById('voiceBundles').textContent = '';
+    return;
+  }
+
+  // 모든 해당 교재 묶음 +1
+  books.forEach(b => {
+    const pages = b.권당페이지수 || 0;
+    const perBundle = pages > 0 ? Math.round(4000/pages) : 0;
+    const expectedBundles = perBundle > 0 ? Math.ceil((b.수량||0)/perBundle) : 0;
+    if(expectedBundles > 0) tapBundle(b.id, perBundle, expectedBundles);
+  });
+
+  const b = books[0];
+  const pages = b.권당페이지수 || 0;
+  const perBundle = pages > 0 ? Math.round(4000/pages) : 0;
+  const expectedBundles = perBundle > 0 ? Math.ceil((b.수량||0)/perBundle) : 0;
+  const newCount = (b.묶음카운트||0) + 1;
+
+  lastAction = {sid, books: books.map(x=>x.id)};
+
+  document.getElementById('voiceId').textContent = sid;
+  document.getElementById('voiceTitle').textContent = (b.신청제목||'').slice(0,18);
+  document.getElementById('voiceBundles').textContent = `${newCount}묶음 ${expectedBundles>0?'/ 예정 '+expectedBundles+'묶음':''}`;
+
+  addVoiceLog(sid, b.신청제목, `📦 ${newCount}묶음`);
+
+  // 핀으로 상단 이동
+  pinnedIds = pinnedIds.filter(x=>x!==sid);
+  pinnedIds.unshift(sid);
+  render();
+}
+
+function handleVoiceCancel(sid){
+  const books = allBooks.filter(b => String(b.신청ID) === sid);
+  if(!books.length){
+    addVoiceLog(sid, null, '❌ 취소 실패 - ID 없음');
+    return;
+  }
+  books.forEach(b => {
+    const pages = b.권당페이지수 || 0;
+    const perBundle = pages > 0 ? Math.round(4000/pages) : 0;
+    const expectedBundles = perBundle > 0 ? Math.ceil((b.수량||0)/perBundle) : 0;
+    const cur = b.묶음카운트||0;
+    if(cur > 0) tapBundle(b.id, perBundle, expectedBundles, true);
+  });
+  const newCount = Math.max(0,(books[0].묶음카운트||0)-1);
+  addVoiceLog(sid, books[0].신청제목, `↩️ 취소 → ${newCount}묶음`);
+  document.getElementById('voiceBundles').textContent = `${newCount}묶음 (취소됨)`;
+}
+
+function addVoiceLog(sid, title, msg){
+  const log = document.getElementById('voiceLog');
+  const item = document.createElement('div');
+  item.style.cssText = 'background:rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;color:white;font-size:14px;';
+  item.innerHTML = `<span style="color:#D4BE52;font-weight:700">${sid}</span> ${title?(title.slice(0,14)+''):''} <span style="float:right;opacity:.8">${msg}</span>`;
+  log.insertBefore(item, log.firstChild);
+  // 최대 10개
+  while(log.children.length > 10) log.removeChild(log.lastChild);
 }
 
 function saveDsaLastDate(val){
