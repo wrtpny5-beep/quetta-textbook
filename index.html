@@ -837,48 +837,68 @@ function setMode(m,el){
   render();
 }
 
+function groupBooks(books){
+  const map={};
+  books.forEach(b=>{
+    const sid=String(b.신청ID||b.id);
+    if(!map[sid])map[sid]=[];
+    map[sid].push(b);
+  });
+  return Object.values(map);
+}
+
 function render(){
   const dept=document.getElementById('deptSel').value;
   const q=document.getElementById('searchBox').value.trim().toLowerCase();
   const list=allBooks.filter(b=>{
     if(filterMode==='pending'&&b.입고확인)return false;
     if(filterMode==='today'){
-      // 예상입고일이 오늘인 항목 (다양한 날짜 포맷 지원)
       const d=(b.예상입고일||'').replace(/\s/g,'').replace(/\./g,'-');
-      const short=todayYMD.slice(2); // "26-03-31"
+      const short=todayYMD.slice(2);
       if(!d.includes(short)&&!d.includes(todayYMD))return false;
     }
     if(dept&&b.학과!==dept)return false;
     if(q){
-      if(!(b.신청제목||'').toLowerCase().includes(q)&&!(b.강사||'').toLowerCase().includes(q))return false;
+      if(!(b.신청제목||'').toLowerCase().includes(q)&&!(b.강사||'').toLowerCase().includes(q)&&!String(b.신청ID||'').includes(q))return false;
     }
     return true;
   });
 
-  // 핀 정렬: pinnedIds 순서대로 맨 위, 나머지는 원래 순서
-  list.sort((a,b)=>{
-    const ai=pinnedIds.indexOf(String(a.신청ID));
-    const bi=pinnedIds.indexOf(String(b.신청ID));
+  // 신청ID로 그룹핑
+  const groups=groupBooks(list);
+
+  // 핀 정렬
+  groups.sort((a,b)=>{
+    const ai=pinnedIds.indexOf(String(a[0].신청ID));
+    const bi=pinnedIds.indexOf(String(b[0].신청ID));
     if(ai!==-1&&bi!==-1)return ai-bi;
     if(ai!==-1)return -1;
     if(bi!==-1)return 1;
     return 0;
   });
+
   const el=document.getElementById('cardList');
-  if(!list.length){
+  if(!groups.length){
     el.innerHTML=`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">해당하는 교재가 없습니다</div></div>`;
     return;
   }
-  el.innerHTML=list.map(cardHTML).join('');
+  el.innerHTML=groups.map(cardHTML).join('');
 }
 
 /* ── Card HTML ────────────────────────────────────── */
-function cardHTML(b){
+function cardHTML(group){
+  const b=group[0]; // 대표 교재
+  const sid=String(b.신청ID||b.id);
+  // 합산 수량
+  const totalQty=group.reduce((s,x)=>s+(x.수량||0),0);
+  // 반이름 목록
+  const classList=[...new Set(group.map(x=>x.반이름||x.반코드||'').filter(Boolean))].join(' · ');
+  // 묶음카운트는 첫번째 카드 기준 (공유)
   const pages=b.권당페이지수||0;
   let bundleBig='';
   if(pages>0){
     const perBundle=Math.round(4000/pages);
-    const bundles=Math.ceil((b.수량||0)/perBundle);
+    const bundles=Math.ceil(totalQty/perBundle);
     const bc=b.묶음카운트||0;
     const bundleStyle=bc===0
       ? 'background:#F4F4F4;border:1.5px solid #DDD;color:#999'
@@ -887,13 +907,13 @@ function cardHTML(b){
         : bc===bundles
           ? 'background:var(--teal-light);border:2px solid var(--teal);color:var(--teal-deep)'
           : 'background:#FEF0EB;border:2px solid var(--danger);color:var(--danger)';
-    bundleBig=`<div style="${bundleStyle};border-radius:14px;padding:10px 16px;text-align:center;min-width:90px;cursor:pointer;user-select:none;touch-action:manipulation;transition:all .15s;" onclick="tapBundle('${b.id}',${perBundle},${bundles})" id="bb-${b.id}">
-      <div style="font-size:30px;font-weight:900;line-height:1;" id="bbn-${b.id}">${bc===0?'—':bc}</div>
-      <div style="font-size:12px;font-weight:700;margin-top:2px;" id="bbl-${b.id}">${bc===0?'묶음 탭':bc+'묶음'}</div>
+    bundleBig=`<div style="${bundleStyle};border-radius:14px;padding:10px 16px;text-align:center;min-width:90px;cursor:pointer;user-select:none;touch-action:manipulation;transition:all .15s;" onclick="tapBundleGroup('${sid}',${perBundle},${bundles})" id="bb-${sid}">
+      <div style="font-size:30px;font-weight:900;line-height:1;" id="bbn-${sid}">${bc===0?'—':bc}</div>
+      <div style="font-size:12px;font-weight:700;margin-top:2px;" id="bbl-${sid}">${bc===0?'묶음 탭':bc+'묶음'}</div>
       <div style="font-size:11px;opacity:.7;margin-top:1px;">${perBundle}권/묶음 · 예정 ${bundles}묶음</div>
     </div>`;
   }else{
-    bundleBig=`<div style="background:#F4F4F4;border:1.5px solid #DDD;border-radius:14px;padding:10px 16px;text-align:center;min-width:90px;cursor:pointer;" onclick="focusPage('${b.id}')">
+    bundleBig=`<div style="background:#F4F4F4;border:1.5px solid #DDD;border-radius:14px;padding:10px 16px;text-align:center;min-width:90px;cursor:pointer;" onclick="focusPage('${sid}')">
       <div style="font-size:22px;line-height:1;">📦</div>
       <div style="font-size:11px;color:#999;margin-top:4px;">쪽수 입력 필요</div>
     </div>`;
@@ -901,29 +921,30 @@ function cardHTML(b){
 
   const hasActual=b.실입고수량!==undefined&&b.실입고수량!==null&&b.실입고수량!=='';
   const actual=hasActual?b.실입고수량:'';
-  const shortage=hasActual?Math.max(0,(b.수량||0)-b.실입고수량):0;
+  const shortage=hasActual?Math.max(0,totalQty-b.실입고수량):0;
   const isShortage=hasActual&&shortage>0;
+  const confirmed=group.every(x=>x.입고확인);
 
-  const cardCls=b.입고확인?'is-confirmed':isShortage?'is-shortage':'';
-  const chkCls=b.입고확인?'on':'';
+  const cardCls=confirmed?'is-confirmed':isShortage?'is-shortage':'';
+  const chkCls=confirmed?'on':'';
 
   return `
-<div class="card ${cardCls}" id="c-${b.id}">
-  <button class="chk ${chkCls}" onclick="toggleCheck('${b.id}')">
+<div class="card ${cardCls}" id="c-${sid}">
+  <button class="chk ${chkCls}" onclick="toggleCheckGroup('${sid}')">
     <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
   </button>
   <div class="card-body">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;">
       <div style="flex:1;min-width:0;">
         <div class="card-title">${esc(b.신청제목||'(제목 없음)')}</div>
-        <div class="card-meta" style="margin-bottom:0">${esc(b.강사||'')} · ${esc(b.학과||'')} · ${esc(b.반이름||'')} <span style="color:var(--border);margin:0 4px">|</span> <span style="color:var(--text-sub);font-size:13px">ID ${esc(String(b.신청ID||''))}</span></div>
+        <div class="card-meta" style="margin-bottom:0">${esc(b.강사||'')} · ${esc(b.학과||'')} · ${esc(classList)} <span style="color:var(--border);margin:0 4px">|</span> <span style="color:var(--text-sub);font-size:13px">ID ${sid}</span></div>
       </div>
       <div style="flex-shrink:0;text-align:right;">
         ${bundleBig}
       </div>
     </div>
     <div class="badges" style="margin-bottom:14px">
-      <span class="badge b-teal">신청 ${b.수량||0}권</span>
+      <span class="badge b-teal">신청 ${totalQty}권</span>
       ${b.예상입고일?`<span class="badge b-gray">예상입고 ${esc(b.예상입고일)}</span>`:''}
       ${b.강의예정일?`<span class="badge b-gray">강의 ${esc(b.강의예정일)}</span>`:''}
     </div>
@@ -931,28 +952,28 @@ function cardHTML(b){
       <div class="igroup">
         <span class="ilabel">실입고</span>
         <input class="ninput" readonly value="${actual}" placeholder="—"
-          onclick="openNP('${b.id}','실입고 수량 입력',${hasActual?b.실입고수량:b.수량||0})"
-          id="ni-${b.id}">
+          onclick="openNP('${sid}','실입고 수량 입력',${hasActual?b.실입고수량:totalQty})"
+          id="ni-${sid}">
         <span class="ilabel">권</span>
       </div>
       <div class="igroup">
         <span class="ilabel">부족</span>
         <input class="ninput${isShortage?' shortage':''}" readonly
-          value="${hasActual?shortage:''}" placeholder="—" id="sh-${b.id}">
+          value="${hasActual?shortage:''}" placeholder="—" id="sh-${sid}">
         <span class="ilabel">권</span>
       </div>
       <div class="igroup" style="margin-left:auto">
         <span class="ilabel" style="font-size:13px">쪽수</span>
         <input class="pg-input" type="number" min="1" placeholder="쪽"
           value="${b.권당페이지수||''}"
-          id="pg-${b.id}"
-          onchange="savePage('${b.id}',this.value)">
+          id="pg-${sid}"
+          onchange="savePageGroup('${sid}',this.value)">
       </div>
     </div>
     <div class="irow">
       <span class="ilabel">비고</span>
       <input class="note-input" placeholder="메모 입력..." value="${esc(b.비고||'')}"
-        onchange="saveNote('${b.id}',this.value)">
+        onchange="saveNoteGroup('${sid}',this.value)">
     </div>
   </div>
 </div>`;
@@ -1028,6 +1049,29 @@ function focusPage(id){
 }
 
 /* ── Toggle Check ─────────────────────────────────── */
+function toggleCheckGroup(sid){
+  const group=allBooks.filter(b=>String(b.신청ID)===sid);
+  if(!group.length)return;
+  const newVal=!group.every(x=>x.입고확인);
+  const now=new Date();
+  const dateStr=`${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
+  const updates={};
+  group.forEach(b=>{
+    b.입고확인=newVal;
+    if(newVal){
+      b.입고확인일=dateStr;
+      if(b.실입고수량===undefined||b.실입고수량===null)b.실입고수량=b.수량||0;
+      updates['textbooks/'+b.id+'/입고확인']=true;
+      updates['textbooks/'+b.id+'/입고확인일']=dateStr;
+      if(b.실입고수량===undefined||b.실입고수량===null)updates['textbooks/'+b.id+'/실입고수량']=b.수량||0;
+    }else{
+      updates['textbooks/'+b.id+'/입고확인']=false;
+    }
+  });
+  db.ref('/').update(updates);
+  render();
+  updateStats();
+}
 function toggleCheck(id){
   const b=allBooks.find(x=>x.id===id);
   if(!b)return;
@@ -1045,9 +1089,54 @@ function toggleCheck(id){
   db.ref('textbooks/'+id).update(upd);
 }
 
+/* ── Bundle Group ────────────────────────────────────── */
+function tapBundleGroup(sid, perBundle, expectedBundles, cancel=false){
+  const group=allBooks.filter(b=>String(b.신청ID)===sid);
+  if(!group.length)return;
+  const b=group[0];
+  const cur=b.묶음카운트||0;
+  const next=cancel?Math.max(0,cur-1):cur>=expectedBundles+2?0:cur+1;
+  const totalQty=group.reduce((s,x)=>s+(x.수량||0),0);
+  const actual=next===expectedBundles?totalQty:next*perBundle;
+
+  // 색상
+  let bg,border,color;
+  if(next===0){bg='#F4F4F4';border='#DDD';color='#999';}
+  else if(next<expectedBundles){bg='#FBF5D0';border='#E8D666';color='#7A6400';}
+  else if(next===expectedBundles){bg='var(--teal-light)';border='var(--teal)';color='var(--teal-deep)';}
+  else{bg='#FEF0EB';border='var(--danger)';color='var(--danger)';}
+
+  const box=document.getElementById('bb-'+sid);
+  const num=document.getElementById('bbn-'+sid);
+  const lbl=document.getElementById('bbl-'+sid);
+  if(box){box.style.background=bg;box.style.borderColor=border;box.style.color=color;}
+  if(num){num.textContent=next===0?'—':next;}
+  if(lbl){lbl.textContent=next===0?'묶음 탭':next+'묶음';}
+
+  const ni=document.getElementById('ni-'+sid);
+  const sh=document.getElementById('sh-'+sid);
+  if(ni)ni.value=next===0?'':actual;
+  if(sh){
+    const shortage=next===0?0:Math.max(0,totalQty-actual);
+    sh.value=next===0?'':shortage;
+    sh.className='ninput'+(shortage>0&&next>0?' shortage':'');
+  }
+
+  // 모든 그룹 카드에 묶음카운트 동기화
+  const updates={};
+  group.forEach(b2=>{
+    b2.묶음카운트=next;
+    updates['textbooks/'+b2.id+'/묶음카운트']=next;
+    updates['textbooks/'+b2.id+'/실입고수량']=next===0?null:actual;
+    updates['textbooks/'+b2.id+'/부족수량']=next===0?null:Math.max(0,totalQty-actual);
+  });
+  db.ref('/').update(updates);
+  if(navigator.vibrate)navigator.vibrate(30);
+}
+
 /* ── Numpad ───────────────────────────────────────── */
-function openNP(id,title,current){
-  npTarget=id;
+function openNP(sid,title,current){
+  npTarget=sid;
   npVal=current!==undefined?String(current):'';
   document.getElementById('npTitle').textContent=title;
   document.getElementById('npDisplay').textContent=npVal||'0';
@@ -1064,9 +1153,15 @@ function npKey(k){
   else if(k==='ok'){
     if(npTarget){
       const val=parseInt(npVal)||0;
-      const b=allBooks.find(x=>x.id===npTarget);
-      const shortage=b?Math.max(0,(b.수량||0)-val):0;
-      db.ref('textbooks/'+npTarget).update({실입고수량:val,부족수량:shortage});
+      const group=allBooks.filter(x=>String(x.신청ID)===npTarget);
+      const totalQty=group.reduce((s,x)=>s+(x.수량||0),0);
+      const shortage=Math.max(0,totalQty-val);
+      const updates={};
+      group.forEach(b=>{
+        updates['textbooks/'+b.id+'/실입고수량']=val;
+        updates['textbooks/'+b.id+'/부족수량']=shortage;
+      });
+      db.ref('/').update(updates);
     }
     document.getElementById('npOverlay').classList.remove('on');
     npTarget=null;npVal='';return;
@@ -1077,10 +1172,18 @@ function npKey(k){
 }
 
 /* ── Save ─────────────────────────────────────────── */
-function saveNote(id,v){db.ref('textbooks/'+id).update({비고:v});}
-function savePage(id,v){
+function saveNoteGroup(sid,v){
+  const group=allBooks.filter(b=>String(b.신청ID)===sid);
+  const updates={};
+  group.forEach(b=>{updates['textbooks/'+b.id+'/비고']=v;});
+  db.ref('/').update(updates);
+}
+function savePageGroup(sid,v){
   const n=parseInt(v)||0;
-  db.ref('textbooks/'+id).update({권당페이지수:n});
+  const group=allBooks.filter(b=>String(b.신청ID)===sid);
+  const updates={};
+  group.forEach(b=>{updates['textbooks/'+b.id+'/권당페이지수']=n;});
+  db.ref('/').update(updates);
 }
 
 /* ── Receipt ──────────────────────────────────────── */
@@ -1437,26 +1540,30 @@ function handleVoiceId(sid){
   }
 
   // 모든 해당 교재 묶음 +1
-  books.forEach(b => {
-    const pages = b.권당페이지수 || 0;
-    const perBundle = pages > 0 ? Math.round(4000/pages) : 0;
-    const expectedBundles = perBundle > 0 ? Math.ceil((b.수량||0)/perBundle) : 0;
-    if(expectedBundles > 0) tapBundle(b.id, perBundle, expectedBundles);
-  });
-
   const b = books[0];
   const pages = b.권당페이지수 || 0;
   const perBundle = pages > 0 ? Math.round(4000/pages) : 0;
   const expectedBundles = perBundle > 0 ? Math.ceil((b.수량||0)/perBundle) : 0;
+  // tapBundle 전 현재 카운트 기억 후 +1 계산
   const newCount = (b.묶음카운트||0) + 1;
+
+  if(perBundle > 0) tapBundleGroup(sid, perBundle, expectedBundles);
+  else {
+    const updates={};
+    books.forEach(b2=>{
+      b2.묶음카운트=(b2.묶음카운트||0)+1;
+      updates['textbooks/'+b2.id+'/묶음카운트']=b2.묶음카운트;
+    });
+    db.ref('/').update(updates);
+  }
 
   lastAction = {sid, books: books.map(x=>x.id)};
 
   document.getElementById('voiceId').textContent = sid;
-  document.getElementById('voiceTitle').textContent = (b.신청제목||'').slice(0,18);
-  document.getElementById('voiceBundles').textContent = `${newCount}묶음 ${expectedBundles>0?'/ 예정 '+expectedBundles+'묶음':''}`;
+  document.getElementById('voiceTitle').textContent = (b.신청제목||'').slice(0,18)+(books.length>1?` (${books.length}개 반)`:'');
+  document.getElementById('voiceBundles').textContent = `${newCount}묶음${expectedBundles>0?' / 예정 '+expectedBundles+'묶음':''}`;
 
-  addVoiceLog(sid, b.신청제목, `📦 ${newCount}묶음`);
+  addVoiceLog(sid, b.신청제목, `📦 ${newCount}묶음${books.length>1?' × '+books.length+'반':''}`);
 
   // 핀으로 상단 이동
   pinnedIds = pinnedIds.filter(x=>x!==sid);
@@ -1470,14 +1577,21 @@ function handleVoiceCancel(sid){
     addVoiceLog(sid, null, '❌ 취소 실패 - ID 없음');
     return;
   }
-  books.forEach(b => {
-    const pages = b.권당페이지수 || 0;
-    const perBundle = pages > 0 ? Math.round(4000/pages) : 0;
-    const expectedBundles = perBundle > 0 ? Math.ceil((b.수량||0)/perBundle) : 0;
-    const cur = b.묶음카운트||0;
-    if(cur > 0) tapBundle(b.id, perBundle, expectedBundles, true);
-  });
-  const newCount = Math.max(0,(books[0].묶음카운트||0)-1);
+  const b0 = books[0];
+  const pages = b0.권당페이지수 || 0;
+  const perBundle = pages > 0 ? Math.round(4000/pages) : 0;
+  const totalQty = books.reduce((s,x)=>s+(x.수량||0),0);
+  const expectedBundles = perBundle > 0 ? Math.ceil(totalQty/perBundle) : 0;
+  const newCount = Math.max(0,(b0.묶음카운트||0)-1);
+  if(perBundle > 0) tapBundleGroup(sid, perBundle, expectedBundles, true);
+  else {
+    const updates={};
+    books.forEach(b2=>{
+      b2.묶음카운트=Math.max(0,(b2.묶음카운트||0)-1);
+      updates['textbooks/'+b2.id+'/묶음카운트']=b2.묶음카운트;
+    });
+    db.ref('/').update(updates);
+  }
   addVoiceLog(sid, books[0].신청제목, `↩️ 취소 → ${newCount}묶음`);
   document.getElementById('voiceBundles').textContent = `${newCount}묶음 (취소됨)`;
 }
