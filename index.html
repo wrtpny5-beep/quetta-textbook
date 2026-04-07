@@ -1021,6 +1021,24 @@ function tapBundle(id, perBundle, expectedBundles, cancel=false){
   db.ref('textbooks/'+id).update(upd);
 
   // 진동 피드백 (태블릿 지원 시)
+  // 예정 묶음 채워지면 자동 체크
+  if(next===expectedBundles){
+    const now=new Date();
+    const dateStr=`${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
+    group.forEach(b2=>{
+      updates['textbooks/'+b2.id+'/입고확인']=true;
+      updates['textbooks/'+b2.id+'/입고확인일']=dateStr;
+      b2.입고확인=true;
+    });
+    setTimeout(()=>{render();updateStats();},300);
+  }else if(next<expectedBundles&&next>0){
+    // 다시 줄었으면 체크 해제
+    group.forEach(b2=>{
+      updates['textbooks/'+b2.id+'/입고확인']=false;
+      b2.입고확인=false;
+    });
+  }
+  db.ref('/').update(updates);
   if(navigator.vibrate)navigator.vibrate(30);
 }
 
