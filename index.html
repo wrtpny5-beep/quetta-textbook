@@ -881,14 +881,14 @@ function render(){
   // 신청ID로 그룹핑
   const groups=groupBooks(list);
 
-  // 핀 정렬
+  // 핀 정렬 + 나머지는 신청ID 내림차순
   groups.sort((a,b)=>{
     const ai=pinnedIds.indexOf(String(a[0].신청ID));
     const bi=pinnedIds.indexOf(String(b[0].신청ID));
     if(ai!==-1&&bi!==-1)return ai-bi;
     if(ai!==-1)return -1;
     if(bi!==-1)return 1;
-    return 0;
+    return Number(b[0].신청ID)-Number(a[0].신청ID);
   });
 
   const el=document.getElementById('cardList');
@@ -1648,7 +1648,7 @@ function renderTeacher(){
   const cnt=document.getElementById('teacherCount');
 
   if(!teacher){list.innerHTML=`<div class="empty"><div class="empty-icon">👨‍🏫</div><div class="empty-text">강사 이름을 입력해 주세요</div></div>`;cnt.textContent='';return;}
-  const books=allBooks.filter(b=>(b.강사||'').includes(teacher));
+  const books=allBooks.filter(b=>(b.강사||'').includes(teacher)).sort((a,b)=>Number(b.신청ID)-Number(a.신청ID));
   cnt.textContent=`총 ${books.length}건`;
 
   if(!books.length){
