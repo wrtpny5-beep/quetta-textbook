@@ -649,6 +649,16 @@ body{
   </div>
 </div>
 
+<div class="panel" id="panel-teacher" style="background:var(--bg)">
+  <div style="background:white;border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <select id="teacherSel" onchange="renderTeacher()" style="height:44px;padding:0 14px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;flex:1;min-width:140px;">
+      <option value="">강사 선택</option>
+    </select>
+    <div style="font-size:14px;color:var(--text-sub);" id="teacherCount"></div>
+  </div>
+  <div id="teacherList"></div>
+</div>
+
 <div class="panel panel-settings" id="panel-settings">
   <div class="s-card">
     <div class="s-title">📂 교재 목록 갱신</div>
@@ -687,6 +697,9 @@ body{
   </button>
   <button class="tab" onclick="switchTab('dsa',this)">
     <span class="tab-icon">🖥️</span>DSA 목록
+  </button>
+  <button class="tab" onclick="switchTab('teacher',this)">
+    <span class="tab-icon">👨‍🏫</span>강사별
   </button>
   <button class="tab" onclick="switchTab('settings',this)">
     <span class="tab-icon">⚙️</span>설정
@@ -827,6 +840,7 @@ function switchTab(name,el){
     loadManualEntries();
   }
   if(name==='dsa')renderDSA();
+  if(name==='teacher'){buildTeacherFilter();renderTeacher();}
 }
 
 /* ── Filter / Render ──────────────────────────────── */
@@ -1623,6 +1637,51 @@ function addVoiceLog(sid, title, msg){
   log.insertBefore(item, log.firstChild);
   // 최대 10개
   while(log.children.length > 10) log.removeChild(log.lastChild);
+}
+
+/* ── 강사별 탭 ──────────────────────────────────────── */
+function buildTeacherFilter(){
+  const teachers=[...new Set(allBooks.map(b=>b.강사||'').filter(Boolean))].sort();
+  const sel=document.getElementById('teacherSel');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">강사 선택</option>'+teachers.map(t=>`<option value="${t}">${t}</option>`).join('');
+  if(cur)sel.value=cur;
+}
+
+function renderTeacher(){
+  const teacher=document.getElementById('teacherSel').value;
+  const list=document.getElementById('teacherList');
+  const cnt=document.getElementById('teacherCount');
+
+  if(!teacher){
+    list.innerHTML=`<div class="empty"><div class="empty-icon">👨‍🏫</div><div class="empty-text">강사를 선택해 주세요</div></div>`;
+    cnt.textContent='';
+    return;
+  }
+
+  const books=allBooks.filter(b=>b.강사===teacher);
+  cnt.textContent=`총 ${books.length}건`;
+
+  if(!books.length){
+    list.innerHTML=`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">해당 강사의 교재가 없습니다</div></div>`;
+    return;
+  }
+
+  list.innerHTML=books.map(b=>{
+    const confirmed=b.입고확인;
+    const dateStr=confirmed?(b.입고확인일?` (${fmtDate(b.입고확인일)})`:''):'';
+    const statusBg=confirmed?'var(--teal-light)':'#F4F4F4';
+    const statusColor=confirmed?'var(--teal-deep)':'#999';
+    const statusText=confirmed?`✅ 입고${dateStr}`:'⏳ 미입고';
+    return `
+<div style="background:white;border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;border-left:4px solid ${confirmed?'var(--teal)':'var(--border)'}">
+  <div style="flex:1;min-width:0;">
+    <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:4px;">${esc(b.신청제목||'')}</div>
+    <div style="font-size:13px;color:var(--text-sub);">ID ${esc(String(b.신청ID||''))} · ${esc(b.반이름||b.반코드||'')} · 신청 ${b.수량||0}권</div>
+  </div>
+  <div style="background:${statusBg};color:${statusColor};border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0;">${statusText}</div>
+</div>`;
+  }).join('');
 }
 
 function saveDsaLastDate(val){
