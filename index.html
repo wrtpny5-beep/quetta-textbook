@@ -1515,15 +1515,16 @@ function startVoiceMode(){
     document.getElementById('voiceRaw').textContent = '"' + display + '"';
 
     if(final){
-      // 취소 명령 감지
+      // 취소 명령 먼저 감지 (예: "삼공공일 취소", "취소")
       if(final.includes('취소')){
         const numText = final.replace('취소','').trim();
-        const num = convertVoiceNum(numText) || (lastAction && lastAction.sid);
-        if(num) handleVoiceCancel(num);
+        const num = convertVoiceNum(numText);
+        if(num && num.length === 4) handleVoiceCancel(num);
         return;
       }
+      // 4자리 숫자만 인식
       const num = convertVoiceNum(final);
-      if(num && num.length >= 3) handleVoiceId(num);
+      if(num && num.length === 4) handleVoiceId(num);
     }
   };
 
