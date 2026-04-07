@@ -651,10 +651,10 @@ body{
 
 <div class="panel" id="panel-teacher" style="background:var(--bg)">
   <div style="background:white;border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-    <select id="teacherSel" onchange="renderTeacher()" style="height:44px;padding:0 14px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;flex:1;min-width:140px;">
-      <option value="">강사 선택</option>
-    </select>
-    <div style="font-size:14px;color:var(--text-sub);" id="teacherCount"></div>
+    <input id="teacherSel" placeholder="🔍 강사 이름 검색..." oninput="renderTeacher()"
+      style="height:44px;padding:0 16px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;flex:1;min-width:140px;outline:none;"
+      onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'">
+    <div style="font-size:14px;color:var(--text-sub);white-space:nowrap;" id="teacherCount"></div>
   </div>
   <div id="teacherList"></div>
 </div>
@@ -1640,26 +1640,15 @@ function addVoiceLog(sid, title, msg){
 }
 
 /* ── 강사별 탭 ──────────────────────────────────────── */
-function buildTeacherFilter(){
-  const teachers=[...new Set(allBooks.map(b=>b.강사||'').filter(Boolean))].sort();
-  const sel=document.getElementById('teacherSel');
-  const cur=sel.value;
-  sel.innerHTML='<option value="">강사 선택</option>'+teachers.map(t=>`<option value="${t}">${t}</option>`).join('');
-  if(cur)sel.value=cur;
-}
+function buildTeacherFilter(){}
 
 function renderTeacher(){
-  const teacher=document.getElementById('teacherSel').value;
+  const teacher=(document.getElementById('teacherSel').value||'').trim();
   const list=document.getElementById('teacherList');
   const cnt=document.getElementById('teacherCount');
 
-  if(!teacher){
-    list.innerHTML=`<div class="empty"><div class="empty-icon">👨‍🏫</div><div class="empty-text">강사를 선택해 주세요</div></div>`;
-    cnt.textContent='';
-    return;
-  }
-
-  const books=allBooks.filter(b=>b.강사===teacher);
+  if(!teacher){list.innerHTML=`<div class="empty"><div class="empty-icon">👨‍🏫</div><div class="empty-text">강사 이름을 입력해 주세요</div></div>`;cnt.textContent='';return;}
+  const books=allBooks.filter(b=>(b.강사||'').includes(teacher));
   cnt.textContent=`총 ${books.length}건`;
 
   if(!books.length){
