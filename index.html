@@ -649,28 +649,38 @@ body{
   </div>
 </div>
 
-<div class="panel" id="panel-teacher" style="background:var(--bg)">
-  <div style="background:white;border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-    <input id="teacherSel" placeholder="🔍 강사 이름 검색..." oninput="renderTeacher()"
-      style="height:44px;padding:0 16px;border:2px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;flex:1;min-width:140px;outline:none;"
-      onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--border)'">
-    <div style="font-size:14px;color:var(--text-sub);white-space:nowrap;" id="teacherCount"></div>
+<div class="panel" id="panel-rawdata" style="background:var(--bg);padding:0;overflow:hidden;display:none;flex-direction:column;">
+  <div style="background:white;padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <input id="rawSearchBox" placeholder="🔍 교재명·강사·ID 검색..." oninput="renderRawData()"
+      style="height:40px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;flex:1;min-width:140px;outline:none;">
+    <select id="rawStatusFilter" onchange="renderRawData()" style="height:40px;padding:0 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;">
+      <option value="">전체</option>
+      <option value="true">입고완료</option>
+      <option value="false">미입고</option>
+    </select>
+    <div id="rawCount" style="font-size:14px;color:var(--text-sub);white-space:nowrap;"></div>
   </div>
-  <div id="teacherList"></div>
+  <div style="overflow-x:auto;overflow-y:auto;flex:1;">
+    <table id="rawTable" style="width:max-content;min-width:100%;border-collapse:collapse;font-size:13px;">
+      <thead id="rawHead" style="position:sticky;top:0;z-index:2;"></thead>
+      <tbody id="rawBody"></tbody>
+    </table>
+  </div>
 </div>
+
+
 
 <div class="panel panel-settings" id="panel-settings">
   <div class="s-card">
     <div class="s-title">📂 교재 목록 갱신</div>
     <div class="s-desc">
-      구글 시트에서 다운로드한 <strong>교재신청목록_raw.csv</strong> 파일을 업로드하면<br>
-      전체 목록이 갱신됩니다. 기존 입고 확인 데이터(체크·수량·비고)는 유지됩니다.
+      교재 사이트에서 다운받은 <strong>Excel(.xlsx)</strong> 또는 구글시트에서 내보낸 <strong>CSV</strong> 파일을 바로 업로드할 수 있습니다.<br>기존 입고 확인 데이터(체크·수량·비고)는 유지됩니다.
     </div>
     <div class="drop-zone" onclick="document.getElementById('csvFile').click()">
       <div class="drop-icon">📄</div>
-      <div class="drop-text" id="dropText">탭하여 CSV 파일 선택</div>
+      <div class="drop-text" id="dropText">탭하여 CSV 또는 Excel 파일 선택</div>
     </div>
-    <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="onCSVPicked(this)">
+    <input type="file" id="csvFile" accept=".csv,.xlsx,.xls" style="display:none" onchange="onCSVPicked(this)">
     <button class="s-btn s-btn-teal" id="uploadBtn" style="display:none" onclick="doUpload()">업로드 실행</button>
   </div>
 
@@ -698,9 +708,10 @@ body{
   <button class="tab" onclick="switchTab('dsa',this)">
     <span class="tab-icon">🖥️</span>DSA 목록
   </button>
-  <button class="tab" onclick="switchTab('teacher',this)">
-    <span class="tab-icon">👨‍🏫</span>강사별
+  <button class="tab" onclick="switchTab('rawdata',this)">
+    <span class="tab-icon">📊</span>전체목록
   </button>
+
   <button class="tab" onclick="switchTab('settings',this)">
     <span class="tab-icon">⚙️</span>설정
   </button>
@@ -828,11 +839,14 @@ function buildDeptFilter(){
 
 /* ── Tab Switch ───────────────────────────────────── */
 function switchTab(name,el){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(p=>{p.classList.remove('on');if(p.id==='panel-rawdata')p.style.display='none';});
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.getElementById('panel-'+name).classList.add('on');
   el.classList.add('on');
   document.getElementById('filterBar').style.display=name==='check'?'flex':'none';
+  // rawdata 패널은 flex column
+  const rawPanel=document.getElementById('panel-rawdata');
+  if(rawPanel)rawPanel.style.display=name==='rawdata'?'flex':'none';
   if(name==='receipt'){
     const df=document.getElementById('rcptDateFilter');
     if(df&&!df.value)df.value=todayYMD;
@@ -840,7 +854,8 @@ function switchTab(name,el){
     loadManualEntries();
   }
   if(name==='dsa')renderDSA();
-  if(name==='teacher'){buildTeacherFilter();renderTeacher();}
+  if(name==='rawdata')renderRawData();
+
 }
 
 /* ── Filter / Render ──────────────────────────────── */
@@ -1387,7 +1402,7 @@ async function bulkConfirm(){
   const updates={};
   trueRows.forEach(row=>{
     const sid=String(row['신청ID']||'').trim();
-    const rc=(row['반 코드']||row['반코드']||'').trim();
+    const rc=(row['반 코드']||row['반코드']||'').trim().replace(/[.#$[\]]/g,'').replace(/\//g,'');
     const id=rc?`${sid}_${rc}`:sid;
     if(!sid)return;
     updates['textbooks/'+id+'/입고확인']=true;
@@ -1640,6 +1655,63 @@ function addVoiceLog(sid, title, msg){
 }
 
 /* ── 강사별 탭 ──────────────────────────────────────── */
+/* ── 전체목록 탭 ─────────────────────────────────────── */
+const RAW_COLS=['신청ID','신청제목','강사','학과','반 코드','반 이름','수량','타입','예상입고일','입고확인일','강의예정일','교재사용기한','입고 날짜','DSA 업로드일'];
+
+function renderRawData(){
+  const q=(document.getElementById('rawSearchBox').value||'').trim().toLowerCase();
+  const statusFilter=document.getElementById('rawStatusFilter').value;
+
+  // allBooks + Firebase 입고확인 상태 반영
+  let list=allBooks.filter(b=>{
+    if(q&&!(b.신청제목||'').toLowerCase().includes(q)&&!(b.강사||'').toLowerCase().includes(q)&&!String(b.신청ID||'').includes(q))return false;
+    if(statusFilter==='true'&&!b.입고확인)return false;
+    if(statusFilter==='false'&&b.입고확인)return false;
+    return true;
+  }).sort((a,b)=>Number(b.신청ID)-Number(a.신청ID));
+
+  document.getElementById('rawCount').textContent=`${list.length}건`;
+
+  // 헤더
+  const head=document.getElementById('rawHead');
+  head.innerHTML=`<tr>${RAW_COLS.map(c=>`<th style="background:var(--teal);color:white;padding:9px 12px;text-align:left;font-size:12px;font-weight:700;white-space:nowrap;position:sticky;top:0;">${c}</th>`).join('')}<th style="background:var(--teal);color:white;padding:9px 12px;font-size:12px;font-weight:700;white-space:nowrap;">앱 입고확인</th></tr>`;
+
+  const body=document.getElementById('rawBody');
+  if(!list.length){
+    body.innerHTML=`<tr><td colspan="${RAW_COLS.length+1}" style="text-align:center;padding:40px;color:var(--text-sub)">데이터가 없습니다</td></tr>`;
+    return;
+  }
+
+  body.innerHTML=list.map((b,i)=>{
+    const confirmed=b.입고확인;
+    const rowBg=confirmed?'#F0FAF9':'white';
+    return `<tr style="background:${rowBg};border-bottom:1px solid #EEF2F2;">
+      ${RAW_COLS.map(c=>{
+        let v='';
+        if(c==='신청ID')v=b.신청ID||'';
+        else if(c==='신청제목')v=b.신청제목||'';
+        else if(c==='강사')v=b.강사||'';
+        else if(c==='학과')v=b.학과||'';
+        else if(c==='반 코드')v=b.반코드||'';
+        else if(c==='반 이름')v=b.반이름||'';
+        else if(c==='수량')v=b.수량||'';
+        else if(c==='타입')v=b.타입||'';
+        else if(c==='예상입고일')v=b.예상입고일||'';
+        else if(c==='입고확인일')v=fmtDate(b.입고확인일)||'';
+        else if(c==='강의예정일')v=b.강의예정일||'';
+        else if(c==='교재사용기한')v=b.교재사용기한||'';
+        else if(c==='입고 날짜')v=b.입고날짜||'';
+        else if(c==='DSA 업로드일')v=b.DSA업로드일||b['DSA 업로드일']||'';
+        const isNum=c==='수량'||c==='신청ID';
+        return `<td style="padding:7px 12px;font-size:12px;white-space:nowrap;color:var(--text-main);text-align:${isNum?'right':'left'}">${esc(String(v))}</td>`;
+      }).join('')}
+      <td style="padding:7px 12px;text-align:center;">
+        <span style="background:${confirmed?'var(--teal-light)':'#F4F4F4'};color:${confirmed?'var(--teal-deep)':'#999'};border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">${confirmed?'✅ '+(fmtDate(b.입고확인일)||'완료'):'—'}</span>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
 function buildTeacherFilter(){}
 
 function renderTeacher(){
@@ -1752,10 +1824,32 @@ function onCSVPicked(input){
   const f=input.files[0];
   if(!f)return;
   document.getElementById('dropText').textContent='📄 '+f.name;
-  Papa.parse(f,{header:true,skipEmptyLines:true,complete:r=>{
-    csvData=r.data;
-    document.getElementById('uploadBtn').style.display='block';
-  }});
+
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='xlsx'||ext==='xls'){
+    // Excel 파싱
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{raw:false,dateNF:'yyyy-mm-dd'});
+      // 컬럼명 정규화 (공백 포함 컬럼명 처리)
+      csvData=rows.map(r=>{
+        const norm={};
+        Object.keys(r).forEach(k=>norm[k.trim()]=r[k]);
+        return norm;
+      });
+      document.getElementById('uploadBtn').style.display='block';
+      document.getElementById('dropText').textContent=`📊 ${f.name} (${csvData.length}행)`;
+    };
+    reader.readAsArrayBuffer(f);
+  }else{
+    Papa.parse(f,{header:true,skipEmptyLines:true,complete:r=>{
+      csvData=r.data;
+      document.getElementById('uploadBtn').style.display='block';
+      document.getElementById('dropText').textContent=`📄 ${f.name} (${csvData.length}행)`;
+    }});
+  }
 }
 
 async function doUpload(){
@@ -1786,7 +1880,7 @@ async function doUpload(){
     const updates={};
     csvData.slice(i,i+CHUNK).forEach(row=>{
       const sid=String(row['신청ID']||row['신청id']||'').trim();
-      const rc=(row['반 코드']||row['반코드']||'').trim();
+      const rc=(row['반 코드']||row['반코드']||'').trim().replace(/[.#$[\]]/g,'').replace(/\//g,'');
       const id=rc?`${sid}_${rc}`:sid;
       if(!sid)return;
       updates[id]={
@@ -1806,6 +1900,7 @@ async function doUpload(){
         강의예정일:row['강의예정일']||'',
         교재사용기한:row['교재사용기한']||'',
         입고날짜:row['입고 날짜']||'',
+        'DSA 업로드일':row['DSA 업로드일']||'',
         입고여부:row['입고 여부']||'',
         입고확인일csv:row['입고확인일']||'',
         ...(saved[id]||{
