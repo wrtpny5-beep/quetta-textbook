@@ -558,7 +558,6 @@ body{
     <option value="">학과 전체</option>
   </select>
   <input class="f-search" id="searchBox" placeholder="🔍 교재명 · 강사 검색" oninput="render()" />
-  <button onclick="startVoiceMode()" style="height:40px;padding:0 18px;background:#E05A2B;color:white;border:none;border-radius:20px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">🎤 음성 모드</button>
 </div>
 
 <!-- Panels -->
@@ -922,39 +921,8 @@ function cardHTML(group){
   const totalQty=group.reduce((s,x)=>s+(x.수량||0),0);
   // 반이름 목록
   const classList=[...new Set(group.map(x=>x.반이름||x.반코드||'').filter(Boolean))].join(' · ');
-  // 묶음카운트는 첫번째 카드 기준 (공유)
-  const pages=b.권당페이지수||0;
-  let bundleBig='';
-  if(pages>0){
-    const perBundle=Math.round(4000/pages);
-    const bundles=Math.ceil(totalQty/perBundle);
-    const bc=b.묶음카운트||0;
-    const bundleStyle=bc===0
-      ? 'background:#F4F4F4;border:1.5px solid #DDD;color:#999'
-      : bc<bundles
-        ? 'background:#FBF5D0;border:2px solid #E8D666;color:#7A6400'
-        : bc===bundles
-          ? 'background:var(--teal-light);border:2px solid var(--teal);color:var(--teal-deep)'
-          : 'background:#FEF0EB;border:2px solid var(--danger);color:var(--danger)';
-    bundleBig=`<div style="${bundleStyle};border-radius:14px;padding:10px 16px;text-align:center;min-width:90px;cursor:pointer;user-select:none;touch-action:manipulation;transition:all .15s;" onclick="tapBundleGroup('${sid}',${perBundle},${bundles})" id="bb-${sid}">
-      <div style="font-size:30px;font-weight:900;line-height:1;" id="bbn-${sid}">${bc===0?'—':bc}</div>
-      <div style="font-size:12px;font-weight:700;margin-top:2px;" id="bbl-${sid}">${bc===0?'묶음 탭':bc+'묶음'}</div>
-      <div style="font-size:11px;opacity:.7;margin-top:1px;">${perBundle}권/묶음 · 예정 ${bundles}묶음</div>
-    </div>`;
-  }else{
-    bundleBig=`<div style="background:#F4F4F4;border:1.5px solid #DDD;border-radius:14px;padding:10px 16px;text-align:center;min-width:90px;cursor:pointer;" onclick="focusPage('${sid}')">
-      <div style="font-size:22px;line-height:1;">📦</div>
-      <div style="font-size:11px;color:#999;margin-top:4px;">쪽수 입력 필요</div>
-    </div>`;
-  }
-
-  const hasActual=b.실입고수량!==undefined&&b.실입고수량!==null&&b.실입고수량!=='';
-  const actual=hasActual?b.실입고수량:'';
-  const shortage=hasActual?Math.max(0,totalQty-b.실입고수량):0;
-  const isShortage=hasActual&&shortage>0;
   const confirmed=group.every(x=>x.입고확인);
-
-  const cardCls=confirmed?'is-confirmed':isShortage?'is-shortage':'';
+  const cardCls=confirmed?'is-confirmed':'';
   const chkCls=confirmed?'on':'';
 
   return `
@@ -963,41 +931,11 @@ function cardHTML(group){
     <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
   </button>
   <div class="card-body">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;">
-      <div style="flex:1;min-width:0;">
-        <div class="card-title">${esc(b.신청제목||'(제목 없음)')}</div>
-        <div class="card-meta" style="margin-bottom:0">${esc(b.강사||'')} · ${esc(b.학과||'')} · ${esc(classList)} <span style="color:var(--border);margin:0 4px">|</span> <span style="color:var(--text-sub);font-size:13px">ID ${sid}</span></div>
-      </div>
-      <div style="flex-shrink:0;text-align:right;">
-        ${bundleBig}
-      </div>
-    </div>
-    <div class="badges" style="margin-bottom:14px">
+    <div class="card-title">${esc(b.신청제목||'(제목 없음)')}</div>
+    <div class="card-meta">${esc(b.강사||'')} <span style="color:var(--border);margin:0 6px">|</span> ID ${sid}</div>
+    <div class="badges" style="margin-bottom:12px">
       <span class="badge b-teal">신청 ${totalQty}권</span>
-      ${b.예상입고일?`<span class="badge b-gray">예상입고 ${esc(b.예상입고일)}</span>`:''}
-      ${b.강의예정일?`<span class="badge b-gray">강의 ${esc(b.강의예정일)}</span>`:''}
-    </div>
-    <div class="irow">
-      <div class="igroup">
-        <span class="ilabel">실입고</span>
-        <input class="ninput" readonly value="${actual}" placeholder="—"
-          onclick="openNP('${sid}','실입고 수량 입력',${hasActual?b.실입고수량:totalQty})"
-          id="ni-${sid}">
-        <span class="ilabel">권</span>
-      </div>
-      <div class="igroup">
-        <span class="ilabel">부족</span>
-        <input class="ninput${isShortage?' shortage':''}" readonly
-          value="${hasActual?shortage:''}" placeholder="—" id="sh-${sid}">
-        <span class="ilabel">권</span>
-      </div>
-      <div class="igroup" style="margin-left:auto">
-        <span class="ilabel" style="font-size:13px">쪽수</span>
-        <input class="pg-input" type="number" min="1" placeholder="쪽"
-          value="${b.권당페이지수||''}"
-          id="pg-${sid}"
-          onchange="savePageGroup('${sid}',this.value)">
-      </div>
+      ${classList?`<span class="badge b-gray">${esc(classList)}</span>`:''}
     </div>
     <div class="irow">
       <span class="ilabel">비고</span>
