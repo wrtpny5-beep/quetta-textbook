@@ -504,15 +504,14 @@ body{
   .shortage-cell{color:#E05A2B!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 
   /* 수기 입력 */
-  #manualTable{table-layout:fixed!important;width:100%!important;}
-  #manualTable input{border:none!important;font-size:10px!important;background:transparent!important;}
-  #manualTable input::placeholder{color:transparent!important;}
-  #manualTable th{background:#2BADA0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:5px 6px!important;font-size:10px!important;white-space:nowrap!important;}
-  #manualTable td{padding:4px 6px!important;font-size:10px!important;}
-
-  /* 수기입력 제목 버튼 숨기고 텍스트만 */
-  #panel-receipt>div:nth-child(3)>div:first-child>button{display:none!important;}
-  #panel-receipt>div:nth-child(3)>div:first-child>div{font-size:12px!important;color:#527470!important;}
+  #manualEntrySection{background:#F8FAFA!important;border:1px solid #DDD!important;border-radius:8px!important;padding:10px 12px!important;margin-bottom:8px!important;}
+  #manualEntrySection>div:first-child button{display:none!important;}
+  #manualEntryTable{table-layout:fixed!important;width:100%!important;}
+  #manualEntryTable input{border:none!important;font-size:10px!important;background:transparent!important;}
+  #manualEntryTable input::placeholder{color:transparent!important;}
+  #manualEntryTable th{background:#2BADA0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:5px 6px!important;font-size:10px!important;white-space:nowrap!important;color:white!important;}
+  #manualEntryTable td{padding:4px 6px!important;font-size:10px!important;}
+  #manualEntryTable td:last-child{display:none!important;}
 }
 #idSearchBox::placeholder{color:rgba(255,255,255,0.7);}
 </style>
@@ -558,6 +557,7 @@ body{
     <option value="">학과 전체</option>
   </select>
   <input class="f-search" id="searchBox" placeholder="🔍 교재명 · 강사 검색" oninput="render()" />
+  <button onclick="startVoiceMode()" style="height:40px;padding:0 18px;background:#E05A2B;color:white;border:none;border-radius:20px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">🎤 음성 모드</button>
 </div>
 
 <!-- Panels -->
@@ -595,25 +595,30 @@ body{
     <tbody id="rcptBody"></tbody>
   </table>
 
-  <div id="manualEntrySection" style="background:#F8FAFA;border:1.5px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div style="font-size:14px;font-weight:700;color:var(--text-sub);">✏️ 수기 입력 (CSV 업로드 시 자동 확인 처리)</div>
-      <button onclick="addManualEntry()" style="background:var(--teal);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ 행 추가</button>
+  <div id="manualEntrySection" style="background:#F8FAFA;border:1.5px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--text-main);">✏️ 기타 교재 수기 입력</div>
+        <div style="font-size:12px;color:var(--text-sub);margin-top:2px;">파피 외 경로로 입고된 교재를 직접 입력해 인수증에 함께 출력할 수 있습니다</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button onclick="addManualEntry()" style="background:var(--teal);color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ 행 추가</button>
+        <button onclick="saveManualEntries()" style="background:var(--teal-deep);color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">💾 저장</button>
+      </div>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:14px;" id="manualEntryTable">
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:12px;" id="manualEntryTable">
       <thead>
         <tr>
-          <th style="text-align:left;padding:6px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:80px">신청ID</th>
-          <th style="text-align:left;padding:6px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border)">교재명</th>
-          <th style="text-align:left;padding:6px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:120px">입고확인일</th>
-          <th style="text-align:right;padding:6px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:60px">실입고</th>
-          <th style="text-align:left;padding:6px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:100px">비고</th>
-          <th style="width:60px;border-bottom:2px solid var(--border)"></th>
+          <th style="text-align:left;padding:7px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);">교재명</th>
+          <th style="text-align:left;padding:7px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:80px">강사</th>
+          <th style="text-align:right;padding:7px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:60px">수량</th>
+          <th style="text-align:right;padding:7px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);width:60px">묶음수</th>
+          <th style="text-align:left;padding:7px 8px;color:var(--text-sub);font-weight:700;border-bottom:2px solid var(--border);">비고</th>
+          <th style="width:36px;border-bottom:2px solid var(--border);"></th>
         </tr>
       </thead>
       <tbody id="manualEntryBody"></tbody>
     </table>
-    <button onclick="saveManualEntries()" style="margin-top:12px;background:var(--teal-deep);color:white;border:none;border-radius:8px;padding:9px 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;width:100%">💾 수기 입력 저장 (Firebase 반영)</button>
   </div>
   <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
 </div>
@@ -921,8 +926,39 @@ function cardHTML(group){
   const totalQty=group.reduce((s,x)=>s+(x.수량||0),0);
   // 반이름 목록
   const classList=[...new Set(group.map(x=>x.반이름||x.반코드||'').filter(Boolean))].join(' · ');
+  // 묶음카운트는 첫번째 카드 기준 (공유)
+  const pages=b.권당페이지수||0;
+  let bundleBig='';
+  if(pages>0){
+    const perBundle=Math.round(4000/pages);
+    const bundles=Math.ceil(totalQty/perBundle);
+    const bc=b.묶음카운트||0;
+    const bundleStyle=bc===0
+      ? 'background:#F4F4F4;border:1.5px solid #DDD;color:#999'
+      : bc<bundles
+        ? 'background:#FBF5D0;border:2px solid #E8D666;color:#7A6400'
+        : bc===bundles
+          ? 'background:var(--teal-light);border:2px solid var(--teal);color:var(--teal-deep)'
+          : 'background:#FEF0EB;border:2px solid var(--danger);color:var(--danger)';
+    bundleBig=`<div style="${bundleStyle};border-radius:14px;padding:10px 16px;text-align:center;min-width:90px;cursor:pointer;user-select:none;touch-action:manipulation;transition:all .15s;" onclick="tapBundleGroup('${sid}',${perBundle},${bundles})" id="bb-${sid}">
+      <div style="font-size:30px;font-weight:900;line-height:1;" id="bbn-${sid}">${bc===0?'—':bc}</div>
+      <div style="font-size:12px;font-weight:700;margin-top:2px;" id="bbl-${sid}">${bc===0?'묶음 탭':bc+'묶음'}</div>
+      <div style="font-size:11px;opacity:.7;margin-top:1px;">${perBundle}권/묶음 · 예정 ${bundles}묶음</div>
+    </div>`;
+  }else{
+    bundleBig=`<div style="background:#F4F4F4;border:1.5px solid #DDD;border-radius:14px;padding:10px 16px;text-align:center;min-width:90px;cursor:pointer;" onclick="focusPage('${sid}')">
+      <div style="font-size:22px;line-height:1;">📦</div>
+      <div style="font-size:11px;color:#999;margin-top:4px;">쪽수 입력 필요</div>
+    </div>`;
+  }
+
+  const hasActual=b.실입고수량!==undefined&&b.실입고수량!==null&&b.실입고수량!=='';
+  const actual=hasActual?b.실입고수량:'';
+  const shortage=hasActual?Math.max(0,totalQty-b.실입고수량):0;
+  const isShortage=hasActual&&shortage>0;
   const confirmed=group.every(x=>x.입고확인);
-  const cardCls=confirmed?'is-confirmed':'';
+
+  const cardCls=confirmed?'is-confirmed':isShortage?'is-shortage':'';
   const chkCls=confirmed?'on':'';
 
   return `
@@ -931,15 +967,41 @@ function cardHTML(group){
     <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
   </button>
   <div class="card-body">
-    <div class="card-title">${esc(b.신청제목||'(제목 없음)')}</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
-      <span style="font-size:17px;font-weight:700;color:var(--text-main)">${esc(b.강사||'')}</span>
-      <span style="color:var(--border)">|</span>
-      <span style="font-size:17px;font-weight:700;color:var(--teal-deep)">ID ${sid}</span>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;">
+      <div style="flex:1;min-width:0;">
+        <div class="card-title">${esc(b.신청제목||'(제목 없음)')}</div>
+        <div class="card-meta" style="margin-bottom:0">${esc(b.강사||'')} · ${esc(b.학과||'')} · ${esc(classList)} <span style="color:var(--border);margin:0 4px">|</span> <span style="color:var(--text-sub);font-size:13px">ID ${sid}</span></div>
+      </div>
+      <div style="flex-shrink:0;text-align:right;">
+        ${bundleBig}
+      </div>
     </div>
-    <div class="badges" style="margin-bottom:12px">
+    <div class="badges" style="margin-bottom:14px">
       <span class="badge b-teal">신청 ${totalQty}권</span>
-      ${classList?`<span class="badge b-gray">${esc(classList)}</span>`:''}
+      ${b.예상입고일?`<span class="badge b-gray">예상입고 ${esc(b.예상입고일)}</span>`:''}
+      ${b.강의예정일?`<span class="badge b-gray">강의 ${esc(b.강의예정일)}</span>`:''}
+    </div>
+    <div class="irow">
+      <div class="igroup">
+        <span class="ilabel">실입고</span>
+        <input class="ninput" readonly value="${actual}" placeholder="—"
+          onclick="openNP('${sid}','실입고 수량 입력',${hasActual?b.실입고수량:totalQty})"
+          id="ni-${sid}">
+        <span class="ilabel">권</span>
+      </div>
+      <div class="igroup">
+        <span class="ilabel">부족</span>
+        <input class="ninput${isShortage?' shortage':''}" readonly
+          value="${hasActual?shortage:''}" placeholder="—" id="sh-${sid}">
+        <span class="ilabel">권</span>
+      </div>
+      <div class="igroup" style="margin-left:auto">
+        <span class="ilabel" style="font-size:13px">쪽수</span>
+        <input class="pg-input" type="number" min="1" placeholder="쪽"
+          value="${b.권당페이지수||''}"
+          id="pg-${sid}"
+          onchange="savePageGroup('${sid}',this.value)">
+      </div>
     </div>
     <div class="irow">
       <span class="ilabel">비고</span>
@@ -1186,7 +1248,8 @@ function renderReceipt(){
     const normalized=d.replace(/\./g,'-').replace(/(\d{4})-(\d{1,2})-(\d{1,2})/,(_,y,m,dd)=>`${y}-${m.padStart(2,'0')}-${dd.padStart(2,'0')}`);
     return normalized===filterDate;
   });
-  document.getElementById('rcptCount').innerHTML=`${done.length}<span>확인 건수</span>`;
+  const manualRows=document.querySelectorAll('#manualEntryBody tr').length;
+  document.getElementById('rcptCount').innerHTML=`${done.length+manualRows}<span>확인 건수</span>`;
   document.getElementById('rcptBody').innerHTML=done.map((b,i)=>{
     const actual=b.실입고수량!==undefined?b.실입고수량:b.수량||0;
     const shortage=Math.max(0,(b.수량||0)-actual);
@@ -1363,70 +1426,78 @@ async function bulkConfirm(){
 }
 
 /* ── 수기 입력 ──────────────────────────────────────── */
-function addManualEntry(id='', title='', date='', actual='', note=''){
-  const sec=document.getElementById('manualEntrySection');
-  if(sec)sec.style.display='block';
+function addManualEntry(title='', teacher='', qty='', bundles='', note='', key=''){
   const body=document.getElementById('manualEntryBody');
   const tr=document.createElement('tr');
+  tr.dataset.key=key;
   const inp='border:none;border-bottom:1.5px solid var(--border);font-size:14px;font-family:inherit;background:transparent;padding:4px;outline:none;width:100%';
   tr.innerHTML=`
-    <td style="padding:4px 6px"><input type="text" placeholder="신청ID" value="${id}" style="${inp}" class="me-id"></td>
-    <td style="padding:4px 6px"><input type="text" placeholder="교재명" value="${title}" style="${inp}" class="me-title"></td>
-    <td style="padding:4px 6px"><input type="date" value="${date}" style="${inp}" class="me-date"></td>
-    <td style="padding:4px 6px;text-align:right"><input type="number" placeholder="0" value="${actual}" style="${inp};text-align:right" class="me-actual"></td>
-    <td style="padding:4px 6px"><input type="text" placeholder="비고" value="${note}" style="${inp}" class="me-note"></td>
-    <td style="padding:4px 6px;text-align:center"><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:#CCC;font-size:18px;cursor:pointer;">✕</button></td>
+    <td style="padding:5px 8px"><input type="text" placeholder="교재명 입력" value="${esc(title)}" style="${inp}" class="me-title"></td>
+    <td style="padding:5px 8px"><input type="text" placeholder="강사" value="${esc(teacher)}" style="${inp}" class="me-teacher"></td>
+    <td style="padding:5px 8px;text-align:right"><input type="number" placeholder="0" value="${qty}" style="${inp};text-align:right;width:54px" class="me-qty"></td>
+    <td style="padding:5px 8px;text-align:right"><input type="number" placeholder="0" value="${bundles}" style="${inp};text-align:right;width:54px" class="me-bundles"></td>
+    <td style="padding:5px 8px"><input type="text" placeholder="비고" value="${esc(note)}" style="${inp}" class="me-note"></td>
+    <td style="padding:5px 4px;text-align:center"><button onclick="deleteManualRow(this)" style="background:none;border:none;color:#CCC;font-size:18px;cursor:pointer;padding:0 4px;">✕</button></td>
   `;
   body.appendChild(tr);
+}
+
+function deleteManualRow(btn){
+  const tr=btn.closest('tr');
+  const key=tr.dataset.key;
+  if(key)db.ref('manualEntries/'+key).remove();
+  tr.remove();
 }
 
 async function saveManualEntries(){
   const rows=document.querySelectorAll('#manualEntryBody tr');
   if(!rows.length){alert('입력된 항목이 없습니다.');return;}
-  const entries={};
-  const fbUpdates={};
-  const today=new Date();
-  const todayStr=`${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
+
+  // 기존 전체 삭제 후 재저장
+  await db.ref('manualEntries').remove();
+
+  const saves=[];
   rows.forEach(tr=>{
-    const sid=tr.querySelector('.me-id').value.trim();
-    if(!sid)return;
-    const dateVal=tr.querySelector('.me-date').value;
-    const dateStr=dateVal?dateVal.replace(/-/g,'.'):todayStr;
-    const actual=parseInt(tr.querySelector('.me-actual').value)||0;
-    const note=tr.querySelector('.me-note').value.trim();
     const title=tr.querySelector('.me-title').value.trim();
-    entries[sid]={신청ID:sid,교재명:title,입고확인일:dateStr,실입고수량:actual,비고:note};
-    // Firebase textbooks도 즉시 업데이트 (신청ID_반코드 형태 키 찾기)
-    const matched=allBooks.filter(b=>String(b.신청ID)===sid);
-    matched.forEach(b=>{
-      fbUpdates['textbooks/'+b.id+'/입고확인']=true;
-      fbUpdates['textbooks/'+b.id+'/입고확인일']=dateStr;
-      if(actual>0)fbUpdates['textbooks/'+b.id+'/실입고수량']=actual;
-      if(note)fbUpdates['textbooks/'+b.id+'/비고']=note;
+    if(!title)return;
+    saves.push({
+      교재명:title,
+      강사:tr.querySelector('.me-teacher').value.trim(),
+      수량:parseInt(tr.querySelector('.me-qty').value)||0,
+      묶음수:parseInt(tr.querySelector('.me-bundles').value)||0,
+      비고:tr.querySelector('.me-note').value.trim(),
     });
   });
-  // manualEntries 저장
-  await db.ref('manualEntries').set(entries);
-  // textbooks 즉시 반영
-  if(Object.keys(fbUpdates).length)await db.ref('/').update(fbUpdates);
-  alert(`✅ ${Object.keys(entries).length}건 저장 완료!`);
+
+  if(!saves.length){alert('교재명을 입력해주세요.');return;}
+
+  const updates={};
+  saves.forEach(entry=>{
+    const newKey=db.ref('manualEntries').push().key;
+    updates[newKey]=entry;
+  });
+  await db.ref('manualEntries').update(updates);
+
+  // key를 tr에 다시 반영
+  const trs=document.querySelectorAll('#manualEntryBody tr');
+  const keys=Object.keys(updates);
+  trs.forEach((tr,i)=>{if(keys[i])tr.dataset.key=keys[i];});
+
+  alert(`✅ ${saves.length}건 저장 완료!`);
+  renderReceipt(); // 인수증 카운트 갱신
 }
 
 function loadManualEntries(){
   db.ref('manualEntries').once('value',snap=>{
     const data=snap.val();
-    const sec=document.getElementById('manualEntrySection');
     const body=document.getElementById('manualEntryBody');
-    if(!data||!Object.keys(data).length){
-      if(sec)sec.style.display='none';
-      return;
-    }
-    if(sec)sec.style.display='block';
     if(!body)return;
     body.innerHTML='';
-    Object.values(data).forEach(e=>{
-      addManualEntry(e.신청ID||'',e.교재명||'',e.입고확인일?e.입고확인일.replace(/\./g,'-'):'',e.실입고수량||'',e.비고||'');
-    });
+    if(data){
+      Object.entries(data).forEach(([key,e])=>{
+        addManualEntry(e.교재명||'',e.강사||'',e.수량||'',e.묶음수||'',e.비고||'',key);
+      });
+    }
   });
 }
 
