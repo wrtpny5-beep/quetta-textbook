@@ -1187,6 +1187,17 @@ function savePageGroup(sid,v){
 /* ── Receipt ──────────────────────────────────────── */
 function renderReceipt(){
   const filterDate=document.getElementById('rcptDateFilter')&&document.getElementById('rcptDateFilter').value;
+
+  // 헤더 날짜 업데이트
+  const rcptDateEl=document.getElementById('rcptDate');
+  if(rcptDateEl){
+    if(!filterDate){
+      rcptDateEl.textContent='전체 기간';
+    } else {
+      const d=new Date(filterDate);
+      rcptDateEl.textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
+    }
+  }
   const done=allBooks.filter(b=>{
     if(!b.입고확인)return false;
     if(!filterDate)return true;
