@@ -1865,6 +1865,12 @@ async function doUpload(){
       const rc=(row['반 코드']||row['반코드']||'').trim().replace(/[.#$[\]]/g,'').replace(/\//g,'');
       const id=rc?`${sid}_${rc}`:sid;
       if(!sid)return;
+
+      // 정확한 키 또는 고아 키(신청ID만)에서 기존 확인 상태 가져오기
+      const savedExact=saved[id];
+      const savedOrphan=saved[sid];
+      const confirmedSrc=savedExact||(savedOrphan&&savedOrphan.입고확인?savedOrphan:null);
+
       updates[id]={
         신청ID:sid,
         신청제목:row['신청제목']||'',
@@ -1872,7 +1878,7 @@ async function doUpload(){
         학과:row['학과']||'',
         반이름:row['반 이름']||row['반이름']||'',
         반코드:row['반 코드']||row['반코드']||'',
-        계열:row['계열']||'',
+        계열:row['계열']||row['시즌']||'',
         과목:row['과목']||'',
         과목코드:row['과목코드']||'',
         원고IDX:row['원고IDX']||row['원고Idx']||'',
@@ -1885,12 +1891,17 @@ async function doUpload(){
         'DSA 업로드일':row['DSA 업로드일']||'',
         입고여부:row['입고 여부']||'',
         입고확인일csv:row['입고확인일']||'',
-        ...(saved[id]||{
+        ...(confirmedSrc||{
           입고확인:String(row['입고 여부']||'').trim().toLowerCase()==='true'||!!(manualData[sid]),
           입고확인일:manualData[sid]?.입고확인일||(row['입고확인일']||'').trim()||''
         }),
-        권당페이지수:parseInt(row['권당페이지수'])||(saved[id]&&saved[id].권당페이지수)||0
+        권당페이지수:parseInt(row['권당페이지수'])||(savedExact&&savedExact.권당페이지수)||(savedOrphan&&savedOrphan.권당페이지수)||0
       };
+
+      // 고아 키가 있고 정확한 키와 다르면 삭제
+      if(rc&&savedOrphan&&sid!==id){
+        updates[sid]=null;
+      }
     });
     try{
       await dbRef.update(updates);
