@@ -1829,15 +1829,18 @@ async function doUpload(){
   const manualSnap=await db.ref('manualEntries').once('value');
   const manualData=manualSnap.val()||{};
 
-  // 기존 확인 데이터 보존
+  // 기존 확인 데이터 보존 (undefined 제거)
   const saved={};
   allBooks.forEach(b=>{
     const sk=b.id;
-    saved[sk]={
+    const obj={
       입고확인:b.입고확인,실입고수량:b.실입고수량,
       부족수량:b.부족수량,비고:b.비고,
       권당페이지수:b.권당페이지수,입고확인일:b.입고확인일
     };
+    // undefined 필드 null로 변환 (Firebase 거부 방지)
+    Object.keys(obj).forEach(k=>{if(obj[k]===undefined)obj[k]=null;});
+    saved[sk]=obj;
   });
 
   const CHUNK=20;
