@@ -1228,17 +1228,15 @@ function fmtDate(v){
     const d=new Date(v);
     return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
   }
-  const s=String(v).trim();
-  // YYYY-MM-DD
-  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const s=String(v).trim().replace(/\s/g,'');
+  let m;
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if(m)return `${m[1]}.${parseInt(m[2])}.${parseInt(m[3])}`;
-  // YYYY.M.D already
   m=s.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})/);
   if(m)return `${m[1]}.${parseInt(m[2])}.${parseInt(m[3])}`;
-  // YY.M.D
   m=s.match(/^(\d{2})\.(\d{1,2})\.(\d{1,2})/);
   if(m)return `${2000+parseInt(m[1])}.${parseInt(m[2])}.${parseInt(m[3])}`;
-  return s;
+  return String(v).trim();
 }
 
 function parseDateStr(s){
@@ -1307,10 +1305,10 @@ function renderDSA(){
       '신청제목':b.신청제목||'',
       '수량':b.수량||'',
       '타입':b.타입||'',
-      '입고일':b.입고날짜||'',
+      '입고일':fmtDate(b.입고날짜||''),
       '입고확인일':fmtDate(b.입고확인일),
-      '강의예정일':b.강의예정일||'',
-      '교재사용기한':b.교재사용기한||''
+      '강의예정일':fmtDate(b.강의예정일||''),
+      '교재사용기한':fmtDate(b.교재사용기한||'')
     };
     return `<tr>${DSA_COLS.map(c=>{
       const v=row[c]!==undefined?row[c]:'';
@@ -1731,10 +1729,10 @@ function exportDSA(){
     '신청제목':b.신청제목||'',
     '수량':b.수량||'',
     '타입':b.타입||'',
-    '입고일':b.입고날짜||'',
+    '입고일':fmtDate(b.입고날짜||''),
     '입고확인일':fmtDate(b.입고확인일),
-    '강의예정일':b.강의예정일||'',
-    '교재사용기한':b.교재사용기한||''
+    '강의예정일':fmtDate(b.강의예정일||''),
+    '교재사용기한':fmtDate(b.교재사용기한||'')
   }));
   const ws=XLSX.utils.json_to_sheet(rows,{header:DSA_COLS});
   const wb=XLSX.utils.book_new();
