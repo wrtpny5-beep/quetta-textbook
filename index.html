@@ -560,6 +560,7 @@ body{
     <option value="">학과 전체</option>
   </select>
   <input class="f-search" id="searchBox" placeholder="🔍 교재명 · 강사 검색" oninput="render()" />
+
 </div>
 
 <!-- Panels -->
@@ -930,7 +931,6 @@ function cardHTML(group){
   const confirmed=group.every(x=>x.입고확인);
   const cardCls=confirmed?'is-confirmed':isTypeM?'is-type-m':'';
   const chkCls=confirmed?'on':'';
-
   return `
 <div class="card ${cardCls}" id="c-${sid}">
   <button class="chk ${chkCls}" onclick="toggleCheckGroup('${sid}')">
@@ -945,15 +945,12 @@ function cardHTML(group){
     </div>
     <div class="badges" style="margin-bottom:12px">
       <span class="badge b-teal">신청 ${totalQty}권</span>
-      ${bundles!==null
-        ?`<span class="badge b-gold">📦 예상 ${bundles}묶음</span>`
-        :`<span class="badge b-gray">묶음수 미계산</span>`}
+      ${bundles!==null?`<span class="badge b-gold">📦 예상 ${bundles}묶음</span>`:`<span class="badge b-gray">묶음수 미계산</span>`}
       ${isTypeM?`<span class="badge" style="background:#FFF3E0;color:#E65100;border:1px solid #FFCC80;font-weight:900;">M타입</span>`:''}
     </div>
     <div class="irow">
       <span class="ilabel">비고</span>
-      <input class="note-input" placeholder="메모 입력..." value="${esc(b.비고||'')}"
-        onchange="saveNoteGroup('${sid}',this.value)">
+      <input class="note-input" placeholder="메모 입력..." value="${esc(b.비고||'')}" onchange="saveNoteGroup('${sid}',this.value)">
     </div>
   </div>
 </div>`;
@@ -1187,17 +1184,6 @@ function savePageGroup(sid,v){
 /* ── Receipt ──────────────────────────────────────── */
 function renderReceipt(){
   const filterDate=document.getElementById('rcptDateFilter')&&document.getElementById('rcptDateFilter').value;
-
-  // 헤더 날짜 업데이트
-  const rcptDateEl=document.getElementById('rcptDate');
-  if(rcptDateEl){
-    if(!filterDate){
-      rcptDateEl.textContent='전체 기간';
-    } else {
-      const d=new Date(filterDate);
-      rcptDateEl.textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
-    }
-  }
   const done=allBooks.filter(b=>{
     if(!b.입고확인)return false;
     if(!filterDate)return true;
@@ -1206,6 +1192,12 @@ function renderReceipt(){
     const normalized=d.replace(/\./g,'-').replace(/(\d{4})-(\d{1,2})-(\d{1,2})/,(_,y,m,dd)=>`${y}-${m.padStart(2,'0')}-${dd.padStart(2,'0')}`);
     return normalized===filterDate;
   });
+  // 헤더 날짜 업데이트
+  const rcptDateEl=document.getElementById('rcptDate');
+  if(rcptDateEl){
+    if(!filterDate){rcptDateEl.textContent='전체 기간';}
+    else{const d=new Date(filterDate);rcptDateEl.textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;}
+  }
   const manualRows=document.querySelectorAll('#manualEntryBody tr').length;
   document.getElementById('rcptCount').innerHTML=`${done.length+manualRows}<span>확인 건수</span>`;
   document.getElementById('rcptBody').innerHTML=done.map((b,i)=>{
@@ -1242,19 +1234,18 @@ function fmtDate(v){
 
 function parseDateStr(s){
   if(!s)return null;
-  s=String(s).trim();
-  s=s.replace(/\s/g,'');
+  s=String(s).trim().replace(/\s/g,'');
   let m;
-  // YYYY.M.D or YYYY.MM.DD (4자리 연도)
+  // YYYY.M.D (4자리 연도)
   m=s.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})$/);
   if(m)return new Date(parseInt(m[1]),parseInt(m[2])-1,parseInt(m[3]));
-  // YY.M.D or YY.MM.DD (2자리 연도)
+  // YY.M.D (2자리 연도)
   m=s.match(/^(\d{2})\.(\d{1,2})\.(\d{1,2})$/);
   if(m)return new Date(2000+parseInt(m[1]),parseInt(m[2])-1,parseInt(m[3]));
   // YYYY-MM-DD
   m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if(m)return new Date(parseInt(m[1]),parseInt(m[2])-1,parseInt(m[3]));
-  // M/D or MM/DD (assume 2026)
+  // M/D
   m=s.match(/^(\d{1,2})\/(\d{1,2})$/);
   if(m)return new Date(2026,parseInt(m[1])-1,parseInt(m[2]));
   return null;
@@ -1274,14 +1265,13 @@ function renderDSA(){
       :'날짜를 설정하면 이후 입고 교재만 표시됩니다';
   }
 
-  // 필터: 입고확인=true AND (날짜 없으면 포함 / 있으면 마지막업로드일 이후만)
   const filtered=allBooks.filter(b=>{
     if(!b.입고확인)return false;
     if(!lastDate)return true;
     const dateVal=b.입고확인일||b['입고 날짜']||b.입고날짜||'';
-    if(!dateVal)return true; // 날짜 없는 확인 항목은 포함 (파피 자동 동기화 등)
+    if(!dateVal)return true;
     const d=parseDateStr(dateVal);
-    if(!d)return true; // 파싱 안 되면 일단 포함
+    if(!d)return true;
     return d>lastDate;
   });
 
@@ -1416,39 +1406,21 @@ function deleteManualRow(btn){
 async function saveManualEntries(){
   const rows=document.querySelectorAll('#manualEntryBody tr');
   if(!rows.length){alert('입력된 항목이 없습니다.');return;}
-
-  // 기존 전체 삭제 후 재저장
   await db.ref('manualEntries').remove();
-
   const saves=[];
   rows.forEach(tr=>{
     const title=tr.querySelector('.me-title').value.trim();
     if(!title)return;
-    saves.push({
-      교재명:title,
-      강사:tr.querySelector('.me-teacher').value.trim(),
-      수량:parseInt(tr.querySelector('.me-qty').value)||0,
-      묶음수:parseInt(tr.querySelector('.me-bundles').value)||0,
-      비고:tr.querySelector('.me-note').value.trim(),
-    });
+    saves.push({교재명:title,강사:tr.querySelector('.me-teacher').value.trim(),수량:parseInt(tr.querySelector('.me-qty').value)||0,묶음수:parseInt(tr.querySelector('.me-bundles').value)||0,비고:tr.querySelector('.me-note').value.trim()});
   });
-
   if(!saves.length){alert('교재명을 입력해주세요.');return;}
-
   const updates={};
-  saves.forEach(entry=>{
-    const newKey=db.ref('manualEntries').push().key;
-    updates[newKey]=entry;
-  });
+  saves.forEach(entry=>{const k=db.ref('manualEntries').push().key;updates[k]=entry;});
   await db.ref('manualEntries').update(updates);
-
-  // key를 tr에 다시 반영
   const trs=document.querySelectorAll('#manualEntryBody tr');
-  const keys=Object.keys(updates);
-  trs.forEach((tr,i)=>{if(keys[i])tr.dataset.key=keys[i];});
-
+  Object.keys(updates).forEach((k,i)=>{if(trs[i])trs[i].dataset.key=k;});
   alert(`✅ ${saves.length}건 저장 완료!`);
-  renderReceipt(); // 인수증 카운트 갱신
+  renderReceipt();
 }
 
 function loadManualEntries(){
@@ -1457,11 +1429,7 @@ function loadManualEntries(){
     const body=document.getElementById('manualEntryBody');
     if(!body)return;
     body.innerHTML='';
-    if(data){
-      Object.entries(data).forEach(([key,e])=>{
-        addManualEntry(e.교재명||'',e.강사||'',e.수량||'',e.묶음수||'',e.비고||'',key);
-      });
-    }
+    if(data){Object.entries(data).forEach(([key,e])=>addManualEntry(e.교재명||'',e.강사||'',e.수량||'',e.묶음수||'',e.비고||'',key));}
   });
 }
 
@@ -1735,10 +1703,8 @@ function exportDSA(){
   const filtered=allBooks.filter(b=>{
     if(!b.입고확인)return false;
     if(!lastDate)return true;
-    const dateVal=b.입고확인일||b['입고 날짜']||b.입고날짜||'';
-    if(!dateVal)return true;
-    const d=parseDateStr(dateVal);
-    if(!d)return true;
+    const d=parseDateStr(b.입고확인일||b['입고 날짜']||b.입고날짜||'');
+    if(!d)return false;
     return d>lastDate;
   });
   if(!filtered.length){alert('다운로드할 데이터가 없습니다.');return;}
@@ -1842,16 +1808,11 @@ async function doUpload(){
   const manualSnap=await db.ref('manualEntries').once('value');
   const manualData=manualSnap.val()||{};
 
-  // 기존 확인 데이터 보존 (undefined 제거)
+  // 기존 확인 데이터 보존 (undefined → null 변환)
   const saved={};
   allBooks.forEach(b=>{
     const sk=b.id;
-    const obj={
-      입고확인:b.입고확인,실입고수량:b.실입고수량,
-      부족수량:b.부족수량,비고:b.비고,
-      권당페이지수:b.권당페이지수,입고확인일:b.입고확인일
-    };
-    // undefined 필드 null로 변환 (Firebase 거부 방지)
+    const obj={입고확인:b.입고확인,실입고수량:b.실입고수량,부족수량:b.부족수량,비고:b.비고,권당페이지수:b.권당페이지수,입고확인일:b.입고확인일};
     Object.keys(obj).forEach(k=>{if(obj[k]===undefined)obj[k]=null;});
     saved[sk]=obj;
   });
@@ -1867,12 +1828,9 @@ async function doUpload(){
       const rc=(row['반 코드']||row['반코드']||'').trim().replace(/[.#$[\]]/g,'').replace(/\//g,'');
       const id=rc?`${sid}_${rc}`:sid;
       if(!sid)return;
-
-      // 정확한 키 또는 고아 키(신청ID만)에서 기존 확인 상태 가져오기
       const savedExact=saved[id];
       const savedOrphan=saved[sid];
       const confirmedSrc=savedExact||(savedOrphan&&savedOrphan.입고확인?savedOrphan:null);
-
       updates[id]={
         신청ID:sid,
         신청제목:row['신청제목']||'',
@@ -1883,14 +1841,13 @@ async function doUpload(){
         계열:row['계열']||row['시즌']||'',
         과목:row['과목']||'',
         과목코드:row['과목코드']||'',
-        원고ID:row['원고ID']||row['원고ID']||'',
+        원고ID:row['원고IDX']||row['원고ID']||row['원고Idx']||'',
         수량:parseInt(row['수량'])||0,
         타입:row['타입']||'',
         예상입고일:row['예상입고일']||'',
         강의예정일:row['강의예정일']||'',
         교재사용기한:row['교재사용기한']||'',
         입고날짜:row['입고 날짜']||'',
-        'DSA 업로드일':row['DSA 업로드일']||'',
         입고여부:row['입고 여부']||'',
         입고확인일csv:row['입고확인일']||'',
         ...(confirmedSrc||{
@@ -1899,11 +1856,7 @@ async function doUpload(){
         }),
         권당페이지수:parseInt(row['권당페이지수'])||(savedExact&&savedExact.권당페이지수)||(savedOrphan&&savedOrphan.권당페이지수)||0
       };
-
-      // 고아 키가 있고 정확한 키와 다르면 삭제
-      if(rc&&savedOrphan&&sid!==id){
-        updates[sid]=null;
-      }
+      if(rc&&savedOrphan&&sid!==id)updates[sid]=null;
     });
     try{
       await dbRef.update(updates);
