@@ -1269,9 +1269,9 @@ function renderDSA(){
     if(!b.입고확인)return false;
     if(!lastDate)return true;
     const dateVal=b.입고확인일||b['입고 날짜']||b.입고날짜||'';
-    if(!dateVal)return true;
+    if(!dateVal)return false;
     const d=parseDateStr(dateVal);
-    if(!d)return true;
+    if(!d)return false;
     return d>lastDate;
   });
 
