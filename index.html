@@ -1236,6 +1236,9 @@ function fmtDate(v){
   if(m)return `${m[1]}.${parseInt(m[2])}.${parseInt(m[3])}`;
   m=s.match(/^(\d{2})\.(\d{1,2})\.(\d{1,2})/);
   if(m)return `${2000+parseInt(m[1])}.${parseInt(m[2])}.${parseInt(m[3])}`;
+  // M/D 형식 (예: 5/27, 7/10)
+  m=s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(m)return `2026.${parseInt(m[1])}.${parseInt(m[2])}`;
   return String(v).trim();
 }
 
