@@ -1224,12 +1224,21 @@ const DSA_COLS=['기수','년도','계열','반코드','반이름','학과','강
 
 function fmtDate(v){
   if(!v)return '';
-  // 숫자(Firebase 타임스탬프)면 변환
   if(typeof v==='number'){
     const d=new Date(v);
     return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
   }
-  return String(v);
+  const s=String(v).trim();
+  // YYYY-MM-DD
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return `${m[1]}.${parseInt(m[2])}.${parseInt(m[3])}`;
+  // YYYY.M.D already
+  m=s.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})/);
+  if(m)return `${m[1]}.${parseInt(m[2])}.${parseInt(m[3])}`;
+  // YY.M.D
+  m=s.match(/^(\d{2})\.(\d{1,2})\.(\d{1,2})/);
+  if(m)return `${2000+parseInt(m[1])}.${parseInt(m[2])}.${parseInt(m[3])}`;
+  return s;
 }
 
 function parseDateStr(s){
