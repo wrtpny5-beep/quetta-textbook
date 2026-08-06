@@ -556,6 +556,7 @@ body{
   <button class="f-btn" onclick="setMode('all',this)">전체</button>
   <button class="f-btn on" onclick="setMode('pending',this)">미확인</button>
   <button class="f-btn" onclick="setMode('today',this)">오늘 예정</button>
+  <button class="f-btn" onclick="setMode('overdue',this)">예정일 지난것</button>
   <select class="f-select" id="deptSel" onchange="render()">
     <option value="">학과 전체</option>
   </select>
@@ -891,6 +892,11 @@ function render(){
       const d=(b.예상입고일||'').replace(/\s/g,'').replace(/\./g,'-');
       const short=todayYMD.slice(2);
       if(!d.includes(short)&&!d.includes(todayYMD))return false;
+    }
+    if(filterMode==='overdue'){
+      if(b.입고확인)return false;
+      const d=parseDateStr(b.예상입고일||'');
+      if(!d||d>=new Date(todayYMD))return false;
     }
     if(dept&&b.학과!==dept)return false;
     if(q){
@@ -1295,7 +1301,7 @@ function renderDSA(){
   // raw → DSA 컬럼 매핑
   if(body)body.innerHTML=filtered.map(b=>{
     const row={
-      '기수':'1기','년도':'2026',
+      '기수':(()=>{const d=parseDateStr(b.강의예정일||'');return d&&d>=new Date('2026-07-01')?'2기':'1기';})(),'년도':'2026',
       '계열':b.계열||'',
       '반코드':b.반코드||'',
       '반이름':b.반이름||'',
@@ -1308,7 +1314,7 @@ function renderDSA(){
       '신청제목':b.신청제목||'',
       '수량':b.수량||'',
       '타입':b.타입||'',
-      '입고일':fmtDate(b.입고날짜||''),
+      '입고일':fmtDate(b.입고확인일||''),
       '입고확인일':fmtDate(b.입고확인일),
       '강의예정일':fmtDate(b.강의예정일||''),
       '교재사용기한':fmtDate(b.교재사용기한||'')
@@ -1719,7 +1725,7 @@ function exportDSA(){
   });
   if(!filtered.length){alert('다운로드할 데이터가 없습니다.');return;}
   const rows=filtered.map(b=>({
-    '기수':'1기','년도':'2026',
+    '기수':(()=>{const d=parseDateStr(b.강의예정일||'');return d&&d>=new Date('2026-07-01')?'2기':'1기';})(),'년도':'2026',
     '계열':b.계열||'',
     '반코드':b.반코드||'',
     '반이름':b.반이름||'',
@@ -1732,7 +1738,7 @@ function exportDSA(){
     '신청제목':b.신청제목||'',
     '수량':b.수량||'',
     '타입':b.타입||'',
-    '입고일':fmtDate(b.입고날짜||''),
+    '입고일':fmtDate(b.입고확인일||''),
     '입고확인일':fmtDate(b.입고확인일),
     '강의예정일':fmtDate(b.강의예정일||''),
     '교재사용기한':fmtDate(b.교재사용기한||'')
