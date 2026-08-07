@@ -886,6 +886,9 @@ function groupBooks(books){
 function render(){
   const dept=document.getElementById('deptSel').value;
   const q=document.getElementById('searchBox').value.trim().toLowerCase();
+  const todayDt=new Date(todayYMD);
+  const twoMonthsAgo=new Date(todayDt);
+  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth()-2);
   const list=allBooks.filter(b=>{
     if(filterMode==='pending'&&b.입고확인)return false;
     if(filterMode==='today'){
@@ -898,6 +901,11 @@ function render(){
       const d=parseDateStr(b.예상입고일||'');
       if(!d||d>=new Date(todayYMD))return false;
     }
+    // 2개월 이상 지난 항목 숨김 (입고확인 안된 것만)
+    if(!b.입고확인){
+      const d=parseDateStr(b.예상입고일||'');
+      if(d&&d<twoMonthsAgo)return false;
+    }
     if(dept&&b.학과!==dept)return false;
     if(q){
       if(!(b.신청제목||'').toLowerCase().includes(q)&&!(b.강사||'').toLowerCase().includes(q)&&!String(b.신청ID||'').includes(q))return false;
@@ -908,7 +916,8 @@ function render(){
   // 신청ID로 그룹핑
   const groups=groupBooks(list);
 
-  const todayDt=new Date(todayYMD);
+  const twoMonthsAgo2=new Date(todayDt);
+  twoMonthsAgo2.setMonth(twoMonthsAgo2.getMonth()-2);
   groups.sort((a,b)=>{
     const ai=pinnedIds.indexOf(String(a[0].신청ID));
     const bi=pinnedIds.indexOf(String(b[0].신청ID));
