@@ -934,7 +934,8 @@ function render(){
     const aFuture=da>=todayDt, bFuture=db>=todayDt;
     if(aFuture&&!bFuture)return -1;
     if(!aFuture&&bFuture)return 1;
-    return da-db;
+    // 미래: 가까운 순(오름차순) / 과거: 가까운 순(내림차순)
+    return aFuture ? da-db : db-da;
   });
 
   const el=document.getElementById('cardList');
