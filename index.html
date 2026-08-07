@@ -908,7 +908,7 @@ function render(){
   // 신청ID로 그룹핑
   const groups=groupBooks(list);
 
-  // 핀 정렬 + 나머지는 예상입고일 가까운 순
+  const todayDt=new Date(todayYMD);
   groups.sort((a,b)=>{
     const ai=pinnedIds.indexOf(String(a[0].신청ID));
     const bi=pinnedIds.indexOf(String(b[0].신청ID));
@@ -917,10 +917,15 @@ function render(){
     if(bi!==-1)return 1;
     const da=parseDateStr(a[0].예상입고일||'');
     const db=parseDateStr(b[0].예상입고일||'');
-    if(da&&db)return da-db;
-    if(da)return -1;
-    if(db)return 1;
-    return Number(b[0].신청ID)-Number(a[0].신청ID);
+    // 날짜 없는것 맨 뒤
+    if(!da&&!db)return 0;
+    if(!da)return 1;
+    if(!db)return -1;
+    // 오늘 이후(미래) 먼저, 그 중 가까운 순
+    const aFuture=da>=todayDt, bFuture=db>=todayDt;
+    if(aFuture&&!bFuture)return -1;
+    if(!aFuture&&bFuture)return 1;
+    return da-db;
   });
 
   const el=document.getElementById('cardList');
