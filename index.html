@@ -908,13 +908,18 @@ function render(){
   // 신청ID로 그룹핑
   const groups=groupBooks(list);
 
-  // 핀 정렬 + 나머지는 신청ID 내림차순
+  // 핀 정렬 + 나머지는 예상입고일 가까운 순
   groups.sort((a,b)=>{
     const ai=pinnedIds.indexOf(String(a[0].신청ID));
     const bi=pinnedIds.indexOf(String(b[0].신청ID));
     if(ai!==-1&&bi!==-1)return ai-bi;
     if(ai!==-1)return -1;
     if(bi!==-1)return 1;
+    const da=parseDateStr(a[0].예상입고일||'');
+    const db=parseDateStr(b[0].예상입고일||'');
+    if(da&&db)return da-db;
+    if(da)return -1;
+    if(db)return 1;
     return Number(b[0].신청ID)-Number(a[0].신청ID);
   });
 
@@ -948,6 +953,7 @@ function cardHTML(group){
       <span style="font-size:17px;font-weight:700;color:var(--text-main)">${esc(b.강사||'')}</span>
       <span style="color:var(--border)">|</span>
       <span style="font-size:17px;font-weight:700;color:var(--teal-deep)">ID ${sid}</span>
+      ${b.예상입고일?`<span style="font-size:14px;color:var(--text-sub);font-weight:500;">📅 ${fmtDate(b.예상입고일)}</span>`:''}
     </div>
     <div class="badges" style="margin-bottom:12px">
       <span class="badge b-teal">신청 ${totalQty}권</span>
