@@ -1323,7 +1323,7 @@ function renderDSA(){
   // raw → DSA 컬럼 매핑
   if(body)body.innerHTML=filtered.map(b=>{
     const row={
-      '기수':(()=>{const d=parseDateStr(b.강의예정일||'');return d&&d>=new Date('2026-07-01')?'2기':'1기';})(),'년도':'2026',
+      '기수':(()=>{const d=parseDateStr(b.강의예정일||'');return d&&d>=new Date('2026-10-01')?'3기':d&&d>=new Date('2026-07-01')?'2기':'1기';})(),'년도':'2026',
       '계열':b.계열||'',
       '반코드':b.반코드||'',
       '반이름':b.반이름||'',
@@ -1747,7 +1747,7 @@ function exportDSA(){
   });
   if(!filtered.length){alert('다운로드할 데이터가 없습니다.');return;}
   const rows=filtered.map(b=>({
-    '기수':(()=>{const d=parseDateStr(b.강의예정일||'');return d&&d>=new Date('2026-07-01')?'2기':'1기';})(),'년도':'2026',
+    '기수':(()=>{const d=parseDateStr(b.강의예정일||'');return d&&d>=new Date('2026-10-01')?'3기':d&&d>=new Date('2026-07-01')?'2기':'1기';})(),'년도':'2026',
     '계열':b.계열||'',
     '반코드':b.반코드||'',
     '반이름':b.반이름||'',
